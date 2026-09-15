@@ -1,0 +1,14 @@
+<div class="kpi-card">
+  <div class="kpi-title">{{ kpi.title }}</div>
+  <div class="kpi-value">{{ kpi.value }}</div>
+  <div class="kpi-footer">
+    {% if kpi.delta is defined and kpi.delta is not none %}
+      <span class="kpi-badge {% if kpi.is_positive %}badge-positive{% elif kpi.is_positive == False %}badge-negative{% else %}badge-neutral{% endif %}">
+        {% if kpi.is_positive %}▲ +{{ kpi.delta }}{% elif kpi.is_positive == False %}▼ {{ kpi.delta }}{% else %}{{ kpi.delta }}{% endif %}
+      </span>
+    {% endif %}
+    {% if kpi.subtitle %}
+      <span class="kpi-subtitle">{{ kpi.subtitle }}</span>
+    {% endif %}
+  </div>
+</div>

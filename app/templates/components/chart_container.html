@@ -1,0 +1,12 @@
+<div class="chart-box">
+  <div class="chart-header">
+    <span class="chart-title">{{ chart.title }}</span>
+    {% if chart.badge %}<span class="chart-badge">{{ chart.badge }}</span>{% endif %}
+  </div>
+  <div class="chart-content">
+    <img src="data:image/png;base64,{{ chart.image_base64 }}" alt="{{ chart.title }}" class="chart-img" />
+  </div>
+  {% if chart.description %}
+    <div class="chart-caption">{{ chart.description }}</div>
+  {% endif %}
+</div>

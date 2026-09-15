@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+  # 1. PostgreSQL Database with JSONB indexing
+  db:
+    image: postgres:16-alpine
+    container_name: omni_metrics_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-omni_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omni_secure_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-omni_metrics}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U omni_user -d omni_metrics"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. FastAPI Ingestion & Reporting Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: omni_metrics_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-omni_user}:${POSTGRES_PASSWORD:-omni_secure_pass}@db:5432/${POSTGRES_DB:-omni_metrics}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/custom_reports:/app/app/custom_reports
+      - ./output:/app/output
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # 3. Telegram Bot & Background Report Scheduler
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: omni_metrics_bot
+    restart: unless-stopped
+    command: ["python", "cli.py", "run-bot"]
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-omni_user}:${POSTGRES_PASSWORD:-omni_secure_pass}@db:5432/${POSTGRES_DB:-omni_metrics}
+    volumes:
+      - ./app/custom_reports:/app/app/custom_reports
+      - ./output:/app/output
+
+volumes:
+  postgres_data:
+    driver: local
