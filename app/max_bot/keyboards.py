@@ -40,6 +40,7 @@ def get_max_reports_keyboard() -> Dict[str, Any]:
         rows.append([create_callback_button(report.display_name, f"rep:sel:{report.report_id}")])
 
     rows.append([create_callback_button("🟣 Синхронизировать Wildberries", "rep:sync:wb")])
+    rows.append([create_callback_button("🔵 Синхронизировать Ozon", "rep:sync:ozon")])
     rows.append([create_callback_button("🔄 Обновить список плагинов", "rep:refresh")])
     return build_keyboard_attachment(rows)
 
@@ -88,6 +89,9 @@ def get_max_formats_keyboard(report_id: str, date_range: str) -> Dict[str, Any]:
 def get_max_refresh_keyboard() -> Dict[str, Any]:
     """Simple keyboard to return to main menu or trigger sync."""
     return build_keyboard_attachment([
-        [create_callback_button("🟣 Синхронизировать Wildberries", "rep:sync:wb")],
+        [
+            create_callback_button("🟣 Синхронизировать WB", "rep:sync:wb"),
+            create_callback_button("🔵 Синхронизировать Ozon", "rep:sync:ozon"),
+        ],
         [create_callback_button("📊 Вернуться в меню отчетов", "rep:back:reports")],
     ])

@@ -178,6 +178,42 @@ def sync_wb_cmd(days: int, mock: bool, api_key: Optional[str]):
     run_async(_sync())
 
 
+@cli.command("sync-ozon")
+@click.option("--days", default=14, help="Number of past days of postings to sync (default: 14).")
+@click.option("--mock", is_flag=True, default=False, help="Force simulated sandbox data for demo.")
+@click.option("--client-id", default=None, help="Ozon Seller Client ID.")
+@click.option("--api-key", default=None, help="Ozon Seller API Key.")
+def sync_ozon_cmd(days: int, mock: bool, client_id: Optional[str], api_key: Optional[str]):
+    """Synchronize postings and financial metrics directly from Ozon Seller API."""
+    async def _sync():
+        await init_db()
+        from app.connectors.ozon import OzonConnector
+        connector = OzonConnector(client_id=client_id, api_key=api_key)
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=days)
+
+        click.secho(f"\n🛒 Connecting to Ozon ({'Sandbox/Demo' if (mock or not connector.is_configured()) else 'Live API'})...", fg="blue", bold=True)
+        res = await connector.fetch_and_ingest(start_date=start_date, end_date=end_date, force_mock=mock)
+        if not res.get("success"):
+            click.secho(f"❌ Synchronization failed: {res.get('message')}", fg="red")
+            return
+
+        click.secho(f"✅ Successfully synchronized {res['postings_count']} Ozon postings ({res['metrics_created']} metric records)!", fg="green", bold=True)
+        click.echo(f"   📅 Time Window:     {res['date_from']} -> {res['date_to']}")
+        click.echo(f"   💰 Total Revenue:    {res['total_revenue']:,.2f} RUB")
+        click.echo(f"   📦 Orders Count:     {res['total_orders']}")
+        click.echo(f"   🔄 Returns/Cancels:  {res['total_refunds']:,.2f} RUB")
+        if res.get("top_clusters"):
+            click.echo(f"   📍 Top Clusters:     {', '.join(f'{k} ({v})' for k, v in list(res['top_clusters'].items())[:3])}")
+        if res.get("top_warehouses"):
+            click.echo(f"   🏭 Top Warehouses:    {', '.join(f'{k} ({v})' for k, v in list(res['top_warehouses'].items())[:3])}")
+        click.secho("\n✨ Telemetry updated! Generate executive briefing with 'python cli.py test-report ecommerce_summary'.\n", fg="cyan")
+        await close_db()
+
+    run_async(_sync())
+
+
+
 @cli.command("list-reports")
 def list_reports():
     """List all registered report plugins and their metadata."""
