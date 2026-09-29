@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import random
 import sys
+from typing import Any, Dict, List, Optional
 import click
 
 # Ensure current directory is in sys.path
@@ -142,6 +143,40 @@ def seed_demo(days: int, clear: bool):
         await close_db()
 
     run_async(_seed())
+
+
+@cli.command("sync-wb")
+@click.option("--days", default=14, help="Number of past days of sales to sync (default: 14).")
+@click.option("--mock", is_flag=True, default=False, help="Force simulated sandbox data for demo.")
+@click.option("--api-key", default=None, help="Wildberries Statistics API Key.")
+def sync_wb_cmd(days: int, mock: bool, api_key: Optional[str]):
+    """Synchronize sales and returns directly from Wildberries Statistics API."""
+    async def _sync():
+        await init_db()
+        from app.connectors.wildberries import WildberriesConnector
+        connector = WildberriesConnector(api_key=api_key)
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=days)
+
+        click.secho(f"\n🛒 Connecting to Wildberries ({'Sandbox/Demo' if (mock or not connector.is_configured()) else 'Live API'})...", fg="cyan", bold=True)
+        res = await connector.fetch_and_ingest(start_date=start_date, end_date=end_date, force_mock=mock)
+        if not res.get("success"):
+            click.secho(f"❌ Synchronization failed: {res.get('message')}", fg="red")
+            return
+
+        click.secho(f"✅ Successfully synchronized {res['sales_count']} Wildberries transactions ({res['metrics_created']} metric records)!", fg="green", bold=True)
+        click.echo(f"   📅 Time Window:     {res['date_from']} -> {res['date_to']}")
+        click.echo(f"   💰 Total Revenue:    {res['total_revenue']:,.2f} RUB")
+        click.echo(f"   📦 Orders Count:     {res['total_orders']}")
+        click.echo(f"   🔄 Returns/Cancels:  {res['total_refunds']:,.2f} RUB")
+        if res.get("top_regions"):
+            click.echo(f"   📍 Top Regions:      {', '.join(f'{k} ({v})' for k, v in list(res['top_regions'].items())[:3])}")
+        if res.get("top_warehouses"):
+            click.echo(f"   🏭 Top Warehouses:    {', '.join(f'{k} ({v})' for k, v in list(res['top_warehouses'].items())[:3])}")
+        click.secho("\n✨ Telemetry updated! Generate executive briefing with 'python cli.py test-report ecommerce_summary'.\n", fg="cyan")
+        await close_db()
+
+    run_async(_sync())
 
 
 @cli.command("list-reports")

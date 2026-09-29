@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     ALLOWED_MAX_USERS: Union[List[int], str] = []
     MAX_DEFAULT_CHAT_ID: Optional[int] = None
 
+    # Marketplace Connectors (Wildberries, etc.)
+    WB_API_KEY: Optional[str] = None
+
     # AI Executive Analyst
     # Options: "openai", "anthropic", "ollama", "heuristic", "none"
     AI_PROVIDER: str = "heuristic"
@@ -59,6 +62,16 @@ class Settings(BaseSettings):
     # PDF & Rendering Engine
     PDF_ENGINE: str = "auto"  # "weasyprint", "playwright", "auto"
     OUTPUT_DIR: str = "./output"
+
+    @field_validator("MAX_DEFAULT_CHAT_ID", "DEFAULT_SCHEDULED_CHAT_ID", mode="before")
+    @classmethod
+    def parse_optional_int(cls, v: Any) -> Optional[int]:
+        if v is None or v == "":
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
 
     @field_validator("ALLOWED_TELEGRAM_USERS", "ALLOWED_MAX_USERS", mode="before")
     @classmethod
