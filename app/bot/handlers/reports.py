@@ -33,8 +33,8 @@ async def cmd_report(message: Message):
     )
 
 
-@router.callbackQuery(F.data == "rep:back:reports")
-@router.callbackQuery(F.data == "rep:refresh")
+@router.callback_query(F.data == "rep:back:reports")
+@router.callback_query(F.data == "rep:refresh")
 async def cb_back_to_reports(callback: CallbackQuery):
     """Return to main reports menu."""
     report_registry.discover()
@@ -47,7 +47,7 @@ async def cb_back_to_reports(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.callbackQuery(F.data.startswith("rep:sel:"))
+@router.callback_query(F.data.startswith("rep:sel:"))
 async def cb_select_report(callback: CallbackQuery):
     """User selected a report; prompt for date range."""
     parts = callback.data.split(":")
@@ -71,7 +71,7 @@ async def cb_select_report(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.callbackQuery(F.data.startswith("rep:rng:"))
+@router.callback_query(F.data.startswith("rep:rng:"))
 async def cb_select_range(callback: CallbackQuery):
     """User selected date range; prompt for export format."""
     parts = callback.data.split(":")
@@ -105,7 +105,7 @@ async def cb_select_range(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.callbackQuery(F.data.startswith("rep:gen:"))
+@router.callback_query(F.data.startswith("rep:gen:"))
 async def cb_generate_report(callback: CallbackQuery):
     """Execute report generation and send artifacts to the user."""
     parts = callback.data.split(":")

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import random
 import sys
+from typing import Any, Dict, List, Optional
 import click
 
 # Ensure current directory is in sys.path
