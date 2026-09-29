@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: Optional[str] = None
     ALLOWED_TELEGRAM_USERS: Union[List[int], str] = []
 
+    # MAX Messenger Bot
+    MAX_BOT_TOKEN: Optional[str] = None
+    MAX_API_URL: str = "https://platform-api2.max.ru"
+    ALLOWED_MAX_USERS: Union[List[int], str] = []
+    MAX_DEFAULT_CHAT_ID: Optional[int] = None
+
     # AI Executive Analyst
     # Options: "openai", "anthropic", "ollama", "heuristic", "none"
     AI_PROVIDER: str = "heuristic"
@@ -54,9 +60,9 @@ class Settings(BaseSettings):
     PDF_ENGINE: str = "auto"  # "weasyprint", "playwright", "auto"
     OUTPUT_DIR: str = "./output"
 
-    @field_validator("ALLOWED_TELEGRAM_USERS", mode="before")
+    @field_validator("ALLOWED_TELEGRAM_USERS", "ALLOWED_MAX_USERS", mode="before")
     @classmethod
-    def parse_allowed_telegram_users(cls, v: Any) -> List[int]:
+    def parse_allowed_users(cls, v: Any) -> List[int]:
         if isinstance(v, list):
             return [int(x) for x in v if str(x).strip()]
         if isinstance(v, (int, float)):
@@ -88,6 +94,12 @@ class Settings(BaseSettings):
         if not self.ALLOWED_TELEGRAM_USERS:
             return False
         return user_id in self.ALLOWED_TELEGRAM_USERS
+
+    def is_max_user_allowed(self, user_id: int) -> bool:
+        """Check if user_id is in ALLOWED_MAX_USERS. If empty, allows all for demo/dev."""
+        if not self.ALLOWED_MAX_USERS:
+            return True
+        return user_id in self.ALLOWED_MAX_USERS
 
 
 settings = Settings()

@@ -1,9 +1,10 @@
-# 📊 OmniMetrics Hub & Telegram Report Bot
+# 📊 OmniMetrics Hub: MAX Messenger & Telegram AI Business Hub
 
-> **A self-hosted, production-ready, extensible business metrics hub and automated reporting engine delivered directly to Telegram.**
+> **A self-hosted, production-ready, extensible business metrics hub and automated reporting engine delivered directly to the MAX Messenger platform and Telegram.**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-green.svg)](https://fastapi.tiangolo.com/)
+[![MAX Bot API](https://img.shields.io/badge/MAX%20Bot%20API-platform--api2-blue.svg)](https://dev.max.ru)
 [![Aiogram 3.x](https://img.shields.io/badge/aiogram-3.x-blue.svg)](https://docs.aiogram.dev/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -12,7 +13,7 @@
 
 ## 🌟 Overview
 
-**OmniMetrics Hub** empowers any business, engineering team, or solo developer to self-host their own analytics platform with a single command (`docker compose up`). Ingest arbitrary numerical metrics via a universal REST API, and generate high-impact reports—**styled executive PDFs**, **multi-tab Excel workbooks**, **live Google Sheets sync**, **standalone PNG preview cards**, and **AI-powered executive summaries**—delivered directly to your private Telegram chats on demand or on an automated schedule.
+**OmniMetrics Hub** empowers any business, engineering team, or solo developer to self-host their own analytics platform with a single command (`docker compose up`). Ingest arbitrary numerical metrics via a universal REST API, and generate high-impact reports—**styled executive PDFs**, **multi-tab Excel workbooks**, **live Google Sheets sync**, **standalone PNG preview cards**, and **AI-powered executive summaries**—delivered directly to your private **MAX Messenger** chats and Telegram channels on demand or on an automated schedule.
 
 ```
        ┌────────────────────────────────────────────────────────┐
@@ -42,7 +43,8 @@
              └──────────────┼──────────────┴──────────────┘
                             ▼
        ┌────────────────────────────────────────────────────────┐
-       │              Interactive Telegram Bot (3.x)            │
+       │      Interactive MAX Messenger & Telegram Bots         │
+       │    • MAX Bot API (Webhook + Polling) • Aiogram 3.x     │
        │    • Whitelist Security     • Dynamic Inline Menus     │
        │    • Date Range Pickers     • Automated APScheduler    │
        └────────────────────────────────────────────────────────┘
@@ -248,6 +250,35 @@ The bot is protected by `WhitelistAuthMiddleware`. Only user IDs listed in `ALLO
 
 ---
 
+## 🤖 MAX Messenger Bot (Мессенджер МАКС)
+
+OmniMetrics Hub fully supports native integration with the **MAX Messenger Platform** (`https://platform-api2.max.ru`), enabling corporate teams and business owners to receive real-time telemetry, run factor analysis, and request executive briefings directly in MAX.
+
+### 1. Configuration in `.env`
+```env
+MAX_BOT_TOKEN="your_max_bot_token_here"
+MAX_API_URL="https://platform-api2.max.ru"
+ALLOWED_MAX_USERS=""  # Leave empty for open access or specify user IDs
+```
+
+### 2. Run Modes
+- **Long Polling (Development / Testing)**:
+  ```bash
+  python cli.py run-max-bot
+  ```
+- **Production Webhook (FastAPI)**:
+  Set your webhook in MAX to:
+  `https://your-domain.com/api/v1/max/webhook`
+  All incoming `bot_started`, `message_created`, and `message_callback` events are dispatched asynchronously.
+
+### 3. Interactive Bot Features in MAX
+- **Interactive Inline Keyboards**: Dynamic selection of reports (`ReportRegistry`), date ranges (*Сегодня, Вчера, 7 дней, 30 дней*), and format toggles.
+- **Rich Executive Cards & Charts**: Instant Plotly PNG preview cards uploaded directly to MAX chats via `POST /uploads`.
+- **Corporate Documents**: Full multi-page PDF briefings and Excel spreadsheets delivered as native file attachments.
+- **Security Whitelist**: Access control via `ALLOWED_MAX_USERS` and instant status monitoring via `/status`.
+
+---
+
 ## 🧩 How to Write a Custom Report in 10 Minutes
 
 The pluggable report architecture uses the Strategy Pattern. Adding a report requires **no database migrations** and **no changes to the bot UI**.
@@ -359,8 +390,9 @@ All artifacts (`.pdf`, `.xlsx`, `.png`, and caption) will be generated into `./o
 | `python cli.py test-report <report_id> [--days 7]` | Generate PDF, Excel, and PNG artifacts into `./output/` |
 | `python cli.py create-plugin <name>` | Scaffold a new report plugin in `app/custom_reports/` |
 | `python cli.py run-api` | Launch FastAPI web server |
+| `python cli.py run-max-bot` | Launch MAX Messenger Bot polling runner |
 | `python cli.py run-bot` | Launch Telegram bot long-polling with scheduler |
-| `python cli.py run-all` | Run both API and Telegram bot concurrently |
+| `python cli.py run-all` | Run API, MAX Bot, and Telegram bot concurrently |
 
 ---
 

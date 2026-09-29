@@ -633,7 +633,7 @@ body {{
     <div class="cover-title">OmniMetrics Hub</div>
     <div class="cover-subtitle">
       Единая платформа бизнес-аналитики с AI-инсайтами<br>
-      и доставкой отчётов через Telegram-бота
+      и доставкой отчётов через мессенджер МАКС
     </div>
     <div class="cover-track">Трек: Эффективный бизнес</div>
   </div>
@@ -689,7 +689,7 @@ body {{
         </li>
         <li>
           <div class="feature-icon">🤖</div>
-          <div><span class="feature-title">Telegram-бот</span> — получайте отчёты прямо в мессенджере через удобное inline-меню</div>
+          <div><span class="feature-title">Бот в мессенджере МАКС</span> — получайте отчёты прямо в корпоративном мессенджере через удобное inline-меню</div>
         </li>
         <li>
           <div class="feature-icon">🧠</div>
@@ -741,7 +741,7 @@ body {{
     
     <div class="hypothesis-box">
       <strong>Гипотеза:</strong> Если мы поможем <u>предпринимателю МСП</u> получить 
-      <u>аналитический отчёт с AI-рекомендациями</u> через <u>Telegram-бота за 30 секунд</u>, 
+      <u>аналитический отчёт с AI-рекомендациями</u> через <u>бота в мессенджере МАКС за 30 секунд</u>, 
       то <u>время принятия решений</u> сократится в <u>5 раз</u>, потому что данные из различных 
       источников будут автоматически агрегированы и визуализированы.
     </div>
@@ -782,7 +782,7 @@ body {{
       <div class="scenario-step">
         <div class="step-number">2</div>
         <div class="step-title">Запрос отчёта</div>
-        <div class="step-desc">В Telegram пользователь нажимает кнопку «📊 Отчёты», выбирает тип (общая аналитика или e-commerce) и период (7/30/90 дней).</div>
+        <div class="step-desc">В мессенджере МАКС пользователь нажимает кнопку «📊 Отчёты», выбирает тип (общая аналитика или e-commerce) и период (7/30/90 дней).</div>
       </div>
       <div class="scenario-step">
         <div class="step-number">3</div>
@@ -804,7 +804,7 @@ body {{
       <div class="scenario-step">
         <div class="step-number">6</div>
         <div class="step-title">Автоматизация</div>
-        <div class="step-desc">Настройка расписания: ежедневные или еженедельные отчёты автоматически приходят в Telegram без действий пользователя.</div>
+        <div class="step-desc">Настройка расписания: ежедневные или еженедельные отчёты автоматически приходят в чат МАКС без действий пользователя.</div>
       </div>
     </div>
   </div>
@@ -828,7 +828,7 @@ body {{
         </li>
         <li>
           <div class="feature-icon">📱</div>
-          <div><span class="feature-title">aiogram 3.x</span> — Telegram-бот с inline-клавиатурой и авторизацией</div>
+          <div><span class="feature-title">MAX Bot API</span> — бот в мессенджере МАКС с inline-клавиатурой, Webhook и авторизацией</div>
         </li>
         <li>
           <div class="feature-icon">📈</div>
@@ -891,7 +891,7 @@ body {{
         <ul class="comparison-list">
           <li>Единый REST API для всех источников данных</li>
           <li>Автоматическая агрегация при загрузке через API</li>
-          <li>Отчёт генерируется за 30 секунд по кнопке в Telegram</li>
+          <li>Отчёт генерируется за 30 секунд по кнопке в МАКС</li>
           <li>Интерактивные графики с авто-выбором типа</li>
           <li>AI-рекомендации на основе анализа трендов</li>
           <li>Автоматические отчёты по расписанию</li>
@@ -915,7 +915,7 @@ body {{
         <ul class="moscow-list">
           <li>✓ REST API (загрузка метрик)</li>
           <li>✓ Пакетная загрузка до 5000</li>
-          <li>✓ Telegram-бот с авторизацией</li>
+          <li>✓ Бот в мессенджере МАКС с авторизацией</li>
           <li>✓ Генерация PDF-отчётов</li>
           <li>✓ Визуализация графиками</li>
           <li>✓ 2 встроенных типа отчётов</li>
@@ -1005,7 +1005,7 @@ body {{
   <div class="final-content">
     <div class="final-title">Спасибо!</div>
     <div class="final-subtitle">
-      OmniMetrics Hub — ваш бизнес-аналитик в Telegram.<br>
+      OmniMetrics Hub — ваш бизнес-аналитик в мессенджере МАКС.<br>
       Загрузите данные. Получите инсайты. Принимайте решения.
     </div>
     <div class="final-contacts">
