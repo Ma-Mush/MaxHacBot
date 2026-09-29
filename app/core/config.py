@@ -48,12 +48,18 @@ class Settings(BaseSettings):
     SBERMARKET_MERCHANT_ID: Optional[str] = None
 
     # AI Executive Analyst
-    # Options: "openai", "anthropic", "ollama", "heuristic", "none"
+    # Options: "openai", "deepseek", "gigachat", "groq", "anthropic", "ollama", "heuristic", "none"
     AI_PROVIDER: str = "heuristic"
+    AI_MODE: str = "heuristic"  # "heuristic", "api", "local"
     AI_MODEL: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
+    OPENAI_BASE_URL: Optional[str] = None
+    DEEPSEEK_API_KEY: Optional[str] = None
+    GIGACHAT_CREDENTIALS: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3"
 
     # Google Sheets Integration
     GSHEETS_SERVICE_ACCOUNT_FILE: Optional[str] = "service_account.json"

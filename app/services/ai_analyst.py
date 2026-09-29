@@ -1,7 +1,10 @@
-"""AI Executive Summary service supporting OpenAI, Anthropic, Ollama, and Rule-based Heuristics."""
+"""AI Executive Summary service supporting dynamic switching between Rule-based Heuristic Analyzer,
+Cloud LLMs via API keys (OpenAI, DeepSeek, GigaChat, Groq, Anthropic), and Local Ollama."""
 import json
 import logging
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+import uuid
 import httpx
 
 from app.core.config import settings
@@ -18,12 +21,173 @@ SYSTEM_PROMPT = """Вы — ведущий бизнес-аналитик и ди
 
 Формулируйте каждый пункт емко и профессионально (максимум 1-2 предложения), опираясь на факты и цифры."""
 
+CONFIG_FILE_PATH = Path("./data/ai_config.json")
+
+# Default models per provider
+DEFAULT_MODELS = {
+    "openai": "gpt-4o-mini",
+    "deepseek": "deepseek-chat",
+    "gigachat": "GigaChat",
+    "groq": "llama-3.3-70b-versatile",
+    "anthropic": "claude-3-5-sonnet-20241022",
+    "ollama": "llama3",
+}
+
+PROVIDER_NAMES = {
+    "openai": "OpenAI (GPT-4o-mini)",
+    "deepseek": "DeepSeek API",
+    "gigachat": "GigaChat (Сбербанк)",
+    "groq": "Groq (Llama 3.3 70B)",
+    "anthropic": "Anthropic Claude",
+    "ollama": "Локальная Ollama",
+    "heuristic": "Встроенный анализатор",
+}
+
 
 class AIAnalystService:
-    """Service to produce executive natural language briefings from metrics data."""
+    """Service to produce executive natural language briefings from metrics data with multi-engine switching."""
 
     def __init__(self) -> None:
-        self.provider = settings.AI_PROVIDER.lower().strip()
+        self.mode = "heuristic"  # "heuristic", "api", "local"
+        self.api_provider = "openai"
+        self.api_model = "gpt-4o-mini"
+        self.api_keys: Dict[str, str] = {
+            "openai": "",
+            "deepseek": "",
+            "gigachat": "",
+            "groq": "",
+            "anthropic": "",
+        }
+        self.ollama_base_url = "http://localhost:11434"
+        self.ollama_model = "llama3"
+
+        self._load_config()
+
+    def _load_config(self) -> None:
+        """Load persistent config from ai_config.json, fallback to settings."""
+        self.mode = settings.AI_MODE.lower().strip() or "heuristic"
+        self.api_provider = settings.AI_PROVIDER.lower().strip() or "openai"
+        if self.api_provider in ("heuristic", "none", "ollama"):
+            self.api_provider = "openai"
+        self.api_model = settings.AI_MODEL or DEFAULT_MODELS.get(self.api_provider, "gpt-4o-mini")
+
+        self.api_keys = {
+            "openai": settings.OPENAI_API_KEY or "",
+            "deepseek": settings.DEEPSEEK_API_KEY or "",
+            "gigachat": settings.GIGACHAT_CREDENTIALS or "",
+            "groq": settings.GROQ_API_KEY or "",
+            "anthropic": settings.ANTHROPIC_API_KEY or "",
+        }
+        self.ollama_base_url = settings.OLLAMA_BASE_URL or "http://localhost:11434"
+        self.ollama_model = settings.OLLAMA_MODEL or "llama3"
+
+        if CONFIG_FILE_PATH.exists():
+            try:
+                data = json.loads(CONFIG_FILE_PATH.read_text(encoding="utf-8"))
+                self.mode = data.get("mode", self.mode)
+                self.api_provider = data.get("api_provider", self.api_provider)
+                self.api_model = data.get("api_model", self.api_model)
+                saved_keys = data.get("api_keys", {})
+                for k, v in saved_keys.items():
+                    if v:
+                        self.api_keys[k] = v
+                self.ollama_base_url = data.get("ollama_base_url", self.ollama_base_url)
+                self.ollama_model = data.get("ollama_model", self.ollama_model)
+            except Exception as exc:
+                logger.warning(f"Could not read ai_config.json: {exc}")
+
+    def _save_config(self) -> None:
+        """Save persistent config to ai_config.json."""
+        try:
+            CONFIG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            data = {
+                "mode": self.mode,
+                "api_provider": self.api_provider,
+                "api_model": self.api_model,
+                "api_keys": self.api_keys,
+                "ollama_base_url": self.ollama_base_url,
+                "ollama_model": self.ollama_model,
+            }
+            CONFIG_FILE_PATH.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        except Exception as exc:
+            logger.error(f"Failed writing ai_config.json: {exc}")
+
+    def set_mode(self, mode: str) -> None:
+        """Set active engine mode: 'heuristic', 'api', or 'local'."""
+        if mode in ("heuristic", "api", "local"):
+            self.mode = mode
+            self._save_config()
+
+    def set_api_provider(self, provider: str, model: Optional[str] = None) -> None:
+        """Set active cloud API provider and default model."""
+        if provider in DEFAULT_MODELS:
+            self.api_provider = provider
+            self.api_model = model or DEFAULT_MODELS.get(provider, "")
+            self.mode = "api"
+            self._save_config()
+
+    def set_api_key(self, provider: str, key: str) -> None:
+        """Save API key for a provider."""
+        if provider in self.api_keys:
+            self.api_keys[provider] = key.strip()
+            self._save_config()
+
+    def set_local_model(self, model: str, base_url: Optional[str] = None) -> None:
+        """Set local Ollama model and optional URL."""
+        if model:
+            self.ollama_model = model.strip()
+        if base_url:
+            self.ollama_base_url = base_url.strip()
+        self.mode = "local"
+        self._save_config()
+
+    async def check_ollama(self) -> Dict[str, Any]:
+        """Check if local Ollama daemon is reachable and list downloaded models."""
+        url = f"{self.ollama_base_url.rstrip('/')}/api/tags"
+        try:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                resp = await client.get(url)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    models = [m.get("name") for m in data.get("models", []) if m.get("name")]
+                    return {
+                        "online": True,
+                        "models": models,
+                        "url": self.ollama_base_url,
+                        "message": f"Доступно моделей: {len(models)} ({', '.join(models[:3])})" if models else "Ollama онлайн, модели не загружены",
+                    }
+        except Exception:
+            pass
+        return {
+            "online": False,
+            "models": [],
+            "url": self.ollama_base_url,
+            "message": "Сервис Ollama недоступен (проверьте 'ollama serve')",
+        }
+
+    def get_status(self) -> Dict[str, Any]:
+        """Return comprehensive status for UI/dashboard."""
+        cur_key = self.api_keys.get(self.api_provider, "")
+        masked_key = f"{cur_key[:4]}...{cur_key[-4:]}" if len(cur_key) >= 10 else ("Указан" if cur_key else "Не настроен")
+
+        mode_titles = {
+            "heuristic": "⚡ Встроенный анализатор (Правила)",
+            "api": f"🌐 Нейросеть (API: {PROVIDER_NAMES.get(self.api_provider, self.api_provider)})",
+            "local": f"💻 Локальная нейросеть (Ollama: {self.ollama_model})",
+        }
+
+        return {
+            "mode": self.mode,
+            "mode_title": mode_titles.get(self.mode, self.mode),
+            "api_provider": self.api_provider,
+            "api_provider_name": PROVIDER_NAMES.get(self.api_provider, self.api_provider),
+            "api_model": self.api_model,
+            "has_api_key": bool(cur_key),
+            "api_key_masked": masked_key,
+            "ollama_base_url": self.ollama_base_url,
+            "ollama_url": self.ollama_base_url,
+            "ollama_model": self.ollama_model,
+        }
 
     async def generate_summary(
         self,
@@ -31,42 +195,67 @@ class AIAnalystService:
         metrics_summary: Dict[str, Any],
         context: Optional[str] = None,
     ) -> str:
-        """Generate executive summary using configured provider with heuristic fallback."""
-        if self.provider == "none":
-            return ""
+        """Generate executive summary using the currently selected engine."""
+        # 1. Mode: Heuristic
+        if self.mode == "heuristic":
+            return self._heuristic_summary(report_title, metrics_summary)
 
-        summary_text = None
-        try:
-            if self.provider == "openai" and settings.OPENAI_API_KEY:
-                summary_text = await self._call_openai(report_title, metrics_summary, context)
-            elif self.provider == "anthropic" and settings.ANTHROPIC_API_KEY:
-                summary_text = await self._call_anthropic(report_title, metrics_summary, context)
-            elif self.provider == "ollama":
-                summary_text = await self._call_ollama(report_title, metrics_summary, context)
-        except Exception as exc:
-            logger.warning(f"AI provider '{self.provider}' request failed ({exc}). Falling back to heuristic summary.")
+        # 2. Mode: Cloud API
+        if self.mode == "api":
+            key = self.api_keys.get(self.api_provider, "")
+            if not key:
+                logger.warning(f"API key for '{self.api_provider}' is not set. Falling back to heuristic.")
+                notice = f"*(⚠️ API-ключ для {PROVIDER_NAMES.get(self.api_provider, self.api_provider)} не указан. Использован резервный анализатор)*\n\n"
+                return notice + self._heuristic_summary(report_title, metrics_summary)
 
-        if not summary_text:
-            summary_text = self._heuristic_summary(report_title, metrics_summary)
+            try:
+                if self.api_provider == "openai":
+                    base_url = settings.OPENAI_BASE_URL or "https://api.openai.com/v1"
+                    return await self._call_openai_compatible(base_url, key, self.api_model or "gpt-4o-mini", report_title, metrics_summary, context)
+                elif self.api_provider == "deepseek":
+                    return await self._call_openai_compatible("https://api.deepseek.com", key, self.api_model or "deepseek-chat", report_title, metrics_summary, context)
+                elif self.api_provider == "groq":
+                    return await self._call_openai_compatible("https://api.groq.com/openai/v1", key, self.api_model or "llama-3.3-70b-versatile", report_title, metrics_summary, context)
+                elif self.api_provider == "gigachat":
+                    return await self._call_gigachat(key, self.api_model or "GigaChat", report_title, metrics_summary, context)
+                elif self.api_provider == "anthropic":
+                    return await self._call_anthropic(key, self.api_model or "claude-3-5-sonnet-20241022", report_title, metrics_summary, context)
+            except Exception as exc:
+                logger.error(f"Error calling {self.api_provider} API: {exc}")
+                notice = f"*(⚠️ Ошибка вызова {PROVIDER_NAMES.get(self.api_provider, self.api_provider)}: {str(exc)[:60]}. Использован резервный анализатор)*\n\n"
+                return notice + self._heuristic_summary(report_title, metrics_summary)
 
-        return summary_text
+        # 3. Mode: Local Ollama
+        if self.mode == "local":
+            try:
+                return await self._call_ollama(self.ollama_base_url, self.ollama_model, report_title, metrics_summary, context)
+            except Exception as exc:
+                logger.warning(f"Local Ollama call failed ({exc}). Falling back to heuristic.")
+                notice = f"*(⚠️ Локальная Ollama недоступна на {self.ollama_base_url}. Использован резервный анализатор)*\n\n"
+                return notice + self._heuristic_summary(report_title, metrics_summary)
 
-    async def _call_openai(
+        return self._heuristic_summary(report_title, metrics_summary)
+
+    async def _call_openai_compatible(
         self,
+        base_url: str,
+        api_key: str,
+        model: str,
         report_title: str,
         metrics_summary: Dict[str, Any],
         context: Optional[str],
     ) -> str:
-        model = settings.AI_MODEL or "gpt-4o-mini"
-        user_content = f"Report: {report_title}\nData: {json.dumps(metrics_summary, default=str)}"
+        """Call OpenAI or OpenAI-compatible endpoint (DeepSeek, Groq, OpenRouter)."""
+        user_content = f"Отчет: {report_title}\nДанные метрик: {json.dumps(metrics_summary, default=str, ensure_ascii=False)}"
         if context:
-            user_content += f"\nContext: {context}"
+            user_content += f"\nДополнительный контекст: {context}"
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        endpoint = f"{base_url.rstrip('/')}/chat/completions"
+        async with httpx.AsyncClient(timeout=30.0, verify=False, trust_env=False) as client:
             resp = await client.post(
-                "https://api.openai.com/v1/chat/completions",
+                endpoint,
                 headers={
-                    "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+                    "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
                 },
                 json={
@@ -76,37 +265,88 @@ class AIAnalystService:
                         {"role": "user", "content": user_content},
                     ],
                     "temperature": 0.3,
-                    "max_tokens": 400,
+                    "max_tokens": 500,
                 },
             )
             resp.raise_for_status()
             data = resp.json()
             return data["choices"][0]["message"]["content"].strip()
 
-    async def _call_anthropic(
+    async def _call_gigachat(
         self,
+        credentials: str,
+        model: str,
         report_title: str,
         metrics_summary: Dict[str, Any],
         context: Optional[str],
     ) -> str:
-        model = settings.AI_MODEL or "claude-3-5-sonnet-20241022"
-        user_content = f"Report: {report_title}\nData: {json.dumps(metrics_summary, default=str)}"
+        """Call Sberbank GigaChat API with OAuth token acquisition."""
+        user_content = f"Отчет: {report_title}\nДанные метрик: {json.dumps(metrics_summary, default=str, ensure_ascii=False)}"
         if context:
-            user_content += f"\nContext: {context}"
+            user_content += f"\nДополнительный контекст: {context}"
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, verify=False, trust_env=False) as client:
+            # 1. Obtain Bearer token
+            rquid = str(uuid.uuid4())
+            auth_resp = await client.post(
+                "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
+                headers={
+                    "Authorization": f"Basic {credentials}",
+                    "RqUID": rquid,
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                data={"scope": "GIGACHAT_API_PERS"},
+            )
+            auth_resp.raise_for_status()
+            access_token = auth_resp.json().get("access_token")
+
+            # 2. Chat completion
+            chat_resp = await client.post(
+                "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model or "GigaChat",
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_content},
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 500,
+                },
+            )
+            chat_resp.raise_for_status()
+            data = chat_resp.json()
+            return data["choices"][0]["message"]["content"].strip()
+
+    async def _call_anthropic(
+        self,
+        api_key: str,
+        model: str,
+        report_title: str,
+        metrics_summary: Dict[str, Any],
+        context: Optional[str],
+    ) -> str:
+        """Call Anthropic Messages API."""
+        user_content = f"Отчет: {report_title}\nДанные метрик: {json.dumps(metrics_summary, default=str, ensure_ascii=False)}"
+        if context:
+            user_content += f"\nДополнительный контекст: {context}"
+
+        async with httpx.AsyncClient(timeout=30.0, verify=False, trust_env=False) as client:
             resp = await client.post(
                 "https://api.anthropic.com/v1/messages",
                 headers={
-                    "x-api-key": settings.ANTHROPIC_API_KEY,
+                    "x-api-key": api_key,
                     "anthropic-version": "2023-06-01",
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": model,
+                    "model": model or "claude-3-5-sonnet-20241022",
                     "system": SYSTEM_PROMPT,
                     "messages": [{"role": "user", "content": user_content}],
-                    "max_tokens": 400,
+                    "max_tokens": 500,
                     "temperature": 0.3,
                 },
             )
@@ -116,21 +356,23 @@ class AIAnalystService:
 
     async def _call_ollama(
         self,
+        base_url: str,
+        model: str,
         report_title: str,
         metrics_summary: Dict[str, Any],
         context: Optional[str],
     ) -> str:
-        model = settings.AI_MODEL or "llama3"
-        user_content = f"Report: {report_title}\nData: {json.dumps(metrics_summary, default=str)}"
+        """Call Local Ollama API chat endpoint."""
+        user_content = f"Отчет: {report_title}\nДанные метрик: {json.dumps(metrics_summary, default=str, ensure_ascii=False)}"
         if context:
-            user_content += f"\nContext: {context}"
+            user_content += f"\nДополнительный контекст: {context}"
 
-        url = f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/chat"
-        async with httpx.AsyncClient(timeout=45.0) as client:
+        url = f"{base_url.rstrip('/')}/api/chat"
+        async with httpx.AsyncClient(timeout=45.0, verify=False, trust_env=False) as client:
             resp = await client.post(
                 url,
                 json={
-                    "model": model,
+                    "model": model or "llama3",
                     "messages": [
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": user_content},
