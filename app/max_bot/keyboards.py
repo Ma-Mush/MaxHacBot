@@ -42,6 +42,7 @@ def get_max_reports_keyboard() -> Dict[str, Any]:
         rows.append([create_callback_button(title, f"rep:sel:{report.report_id}")])
 
     rows.append([create_callback_button("📦 Импортировать с маркетплейса", "rep:menu:marketplaces")])
+    rows.append([create_callback_button("🧠 Режим аналитики и AI", "rep:menu:ai")])
     rows.append([create_callback_button("🔄 Обновить список плагинов", "rep:refresh")])
     return build_keyboard_attachment(rows)
 
@@ -109,4 +110,56 @@ def get_max_refresh_keyboard() -> Dict[str, Any]:
     """Simple keyboard to return to main menu after report delivery."""
     return build_keyboard_attachment([
         [create_callback_button("📊 Вернуться в меню отчетов", "rep:back:reports")],
+    ])
+
+
+def get_max_ai_panel_keyboard(current_mode: str, current_provider: str) -> Dict[str, Any]:
+    """Build keyboard for AI & Analytics Control Panel."""
+    h_mark = " (Активен)" if current_mode == "heuristic" else ""
+    api_mark = " (Активен)" if current_mode == "api" else ""
+    loc_mark = " (Активен)" if current_mode == "local" else ""
+
+    rows: List[List[Dict[str, Any]]] = [
+        [create_callback_button(f"⚡ Встроенный анализатор{h_mark}", "ai:set:heuristic")],
+        [create_callback_button(f"🌐 Нейросеть (API-ключ){api_mark}", "ai:menu:api")],
+        [create_callback_button(f"💻 Локальная нейросеть (Ollama){loc_mark}", "ai:menu:local")],
+        [create_callback_button("⬅️ Назад к меню отчетов", "rep:back:reports")],
+    ]
+    return build_keyboard_attachment(rows)
+
+
+def get_max_ai_api_keyboard(active_provider: str, has_key: bool) -> Dict[str, Any]:
+    """Build keyboard for cloud LLM API provider selection and key input."""
+    def p_btn(name: str, prov_id: str) -> Dict[str, Any]:
+        prefix = "✅ " if active_provider == prov_id else ""
+        return create_callback_button(f"{prefix}{name}", f"ai:set:api:{prov_id}")
+
+    key_action_text = "🔑 Ввести / сменить API-ключ" if has_key else "🔑 Указать API-ключ"
+
+    rows: List[List[Dict[str, Any]]] = [
+        [p_btn("🟢 OpenAI (GPT-4o-mini)", "openai"), p_btn("🔵 DeepSeek API", "deepseek")],
+        [p_btn("🟠 GigaChat (Сбер)", "gigachat"), p_btn("⚡ Groq (Llama 3.3)", "groq")],
+        [p_btn("🟣 Anthropic (Claude)", "anthropic")],
+        [create_callback_button(key_action_text, "ai:action:input_key")],
+        [create_callback_button("⬅️ Назад в панель AI", "rep:menu:ai")],
+    ]
+    return build_keyboard_attachment(rows)
+
+
+def get_max_ai_local_keyboard(ollama_online: bool, active_model: str) -> Dict[str, Any]:
+    """Build keyboard for local Ollama settings."""
+    status_icon = "🟢" if ollama_online else "🔴"
+    rows: List[List[Dict[str, Any]]] = [
+        [create_callback_button(f"✅ Активировать локальную Ollama ({active_model})", "ai:set:local:activate")],
+        [create_callback_button(f"🔄 Проверить статус {status_icon}", "ai:action:check_ollama")],
+        [create_callback_button("✏️ Сменить модель Ollama", "ai:action:input_ollama_model")],
+        [create_callback_button("⬅️ Назад в панель AI", "rep:menu:ai")],
+    ]
+    return build_keyboard_attachment(rows)
+
+
+def get_max_cancel_keyboard(target: str = "rep:menu:ai") -> Dict[str, Any]:
+    """Simple cancel button to abort input state."""
+    return build_keyboard_attachment([
+        [create_callback_button("❌ Отмена", target)],
     ])

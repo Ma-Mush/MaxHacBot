@@ -8,6 +8,10 @@ from app.core.database import async_session_maker
 from app.core.date_utils import parse_date_range
 from app.max_bot.client import max_client
 from app.max_bot.keyboards import (
+    get_max_ai_api_keyboard,
+    get_max_ai_local_keyboard,
+    get_max_ai_panel_keyboard,
+    get_max_cancel_keyboard,
     get_max_date_ranges_keyboard,
     get_max_formats_keyboard,
     get_max_marketplaces_keyboard,
@@ -20,12 +24,16 @@ from app.connectors.wildberries import wb_connector
 from app.connectors.yandex_market import ym_connector
 from app.reports.engine import report_engine
 from app.reports.registry import report_registry
+from app.services.ai_analyst import ai_analyst, PROVIDER_NAMES
 
 logger = logging.getLogger(__name__)
 
 
 class MAXDispatcher:
     """Dispatches incoming MAX Messenger updates to appropriate business workflows."""
+
+    def __init__(self) -> None:
+        self._user_states: Dict[int, str] = {}
 
     async def handle_update(self, update: Dict[str, Any]) -> None:
         """Route raw update payload according to update_type."""
@@ -84,6 +92,56 @@ class MAXDispatcher:
             await max_client.send_message(text=denied_text, chat_id=chat_id, user_id=user_id)
             return
 
+        # Check active interactive conversation state (e.g. inputting API key or Ollama model)
+        active_state = self._user_states.get(user_id) if user_id else None
+        if active_state:
+            if cmd in ("/cancel", "отмена", "отменить", "cancel", "стоп"):
+                self._user_states.pop(user_id, None)
+                await max_client.send_message(
+                    text="❌ <b>Ввод отменен.</b> Возврат в панель управления аналитикой:",
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    keyboard=get_max_ai_panel_keyboard(ai_analyst.mode, ai_analyst.api_provider),
+                )
+                return
+
+            if active_state == "WAIT_API_KEY":
+                self._user_states.pop(user_id, None)
+                ai_analyst.set_api_key(ai_analyst.api_provider, text)
+                ai_analyst.set_mode("api")
+                prov_name = PROVIDER_NAMES.get(ai_analyst.api_provider, ai_analyst.api_provider)
+                masked = f"{text[:4]}...{text[-4:]}" if len(text) >= 10 else "***"
+                succ_text = (
+                    f"✅ <b>API-ключ для {prov_name} успешно сохранен!</b>\n\n"
+                    f"• Сохраненный ключ: <code>{masked}</code>\n"
+                    f"• Активный режим: <b>Нейросеть (API: {prov_name})</b>\n\n"
+                    "Теперь при формировании отчетов аналитические инсайты будут генерироваться через эту модель."
+                )
+                await max_client.send_message(
+                    text=succ_text,
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    keyboard=get_max_ai_api_keyboard(ai_analyst.api_provider, True),
+                )
+                return
+
+            if active_state == "WAIT_OLLAMA_MODEL":
+                self._user_states.pop(user_id, None)
+                ai_analyst.set_local_model(text)
+                succ_text = (
+                    f"✅ <b>Модель локальной нейросети сохранена:</b> <code>{text}</code>\n\n"
+                    f"• Режим: <b>Локальная нейросеть (Ollama)</b>\n"
+                    f"• Адрес сервиса: <code>{ai_analyst.ollama_base_url}</code>"
+                )
+                ollama_status = await ai_analyst.check_ollama()
+                await max_client.send_message(
+                    text=succ_text,
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    keyboard=get_max_ai_local_keyboard(ollama_status.get("online", False), ai_analyst.ollama_model),
+                )
+                return
+
         cmd = text.lower()
         if cmd in ("/start", "/report", "отчет", "отчёт", "старт", "меню"):
             report_registry.discover()
@@ -97,10 +155,13 @@ class MAXDispatcher:
                 user_id=user_id,
                 keyboard=get_max_reports_keyboard(),
             )
+        elif cmd in ("/ai", "/model", "/engine", "нейросеть", "анализатор", "модель", "ai"):
+            await self._render_ai_panel(chat_id=chat_id, user_id=user_id)
         elif cmd in ("/help", "помощь", "справка"):
             help_text = (
                 "💡 <b>Справка по OmniMetrics в МАКС:</b>\n\n"
                 "• <b>/report</b> — открыть каталог доступных отчетов\n"
+                "• <b>/ai</b> — панель управления движком аналитики (эвристика / API / локальная нейросеть)\n"
                 "• <b>/wb</b> — синхронизация статистики продаж с Wildberries API\n"
                 "• <b>/ozon</b> — синхронизация отправлений с Ozon Seller API\n"
                 "• <b>/yandex</b> — синхронизация заказов с Яндекс.Маркетом\n"
@@ -120,11 +181,12 @@ class MAXDispatcher:
             ozon_state = "Подключен (API)" if ozon_connector.is_configured() else "Песочница / Mock"
             ym_state = "Подключен (API)" if ym_connector.is_configured() else "Песочница / Mock"
             sm_state = "Подключен (API)" if sbermarket_connector.is_configured() else "Песочница / Mock"
+            ai_stat = ai_analyst.get_status()
             status_text = (
                 "🟢 <b>Система OmniMetrics Hub активна</b>\n\n"
                 f"• Платформа: <b>Мессенджер МАКС</b>\n"
                 f"• Загружено плагинов отчетов: <b>{reports_count}</b>\n"
-                f"• AI-аналитик: <b>{settings.AI_PROVIDER.upper()}</b>\n"
+                f"• Движок аналитики: <b>{ai_stat['mode_title']}</b>\n"
                 f"• Коннектор Wildberries: <b>{wb_state}</b>\n"
                 f"• Коннектор Ozon: <b>{ozon_state}</b>\n"
                 f"• Коннектор Яндекс.Маркет: <b>{ym_state}</b>\n"
@@ -204,6 +266,148 @@ class MAXDispatcher:
                 chat_id=chat_id,
                 user_id=user_id,
                 keyboard=get_max_marketplaces_keyboard(),
+            )
+            return
+
+        # 1.0.1 AI Control Panel callbacks
+        if payload == "rep:menu:ai":
+            await self._render_ai_panel(chat_id=chat_id, user_id=user_id)
+            return
+
+        if payload == "ai:set:heuristic":
+            ai_analyst.set_mode("heuristic")
+            await max_client.send_message(
+                text="⚡ <b>Режим переключен: Встроенный анализатор (Правила)</b>\n\n"
+                     "Аналитика формируется мгновенно на основе статистических алгоритмов без обращения к внешним нейросетям.",
+                chat_id=chat_id,
+                user_id=user_id,
+                keyboard=get_max_ai_panel_keyboard("heuristic", ai_analyst.api_provider),
+            )
+            return
+
+        if payload == "ai:menu:api":
+            st = ai_analyst.get_status()
+            text = (
+                "🌐 <b>Нейросеть через API-ключ (Облачные LLM)</b>\n\n"
+                "Анализ данных выполняется современной языковой моделью через облачный API.\n\n"
+                f"• Выбранный провайдер: <b>{st['api_provider_name']}</b>\n"
+                f"• Модель: <code>{st['api_model']}</code>\n"
+                f"• API-ключ: <b>{'🟢 Настроен (' + st['api_key_masked'] + ')' if st['has_api_key'] else '🔴 Не указан'}</b>\n\n"
+                "Выберите модель или укажите API-ключ:"
+            )
+            await max_client.send_message(
+                text=text,
+                chat_id=chat_id,
+                user_id=user_id,
+                keyboard=get_max_ai_api_keyboard(ai_analyst.api_provider, st["has_api_key"]),
+            )
+            return
+
+        if payload.startswith("ai:set:api:"):
+            prov = payload.split(":")[3]
+            ai_analyst.set_api_provider(prov)
+            st = ai_analyst.get_status()
+            text = (
+                f"✅ <b>Выбран провайдер: {st['api_provider_name']}</b>\n\n"
+                f"• Модель по умолчанию: <code>{st['api_model']}</code>\n"
+                f"• Статус ключа: <b>{'🟢 Настроен' if st['has_api_key'] else '🔴 Не указан (нажмите кнопку ниже, чтобы ввести)'}</b>\n"
+                f"• Режим анализатора: <b>Нейросеть (API)</b>"
+            )
+            await max_client.send_message(
+                text=text,
+                chat_id=chat_id,
+                user_id=user_id,
+                keyboard=get_max_ai_api_keyboard(ai_analyst.api_provider, st["has_api_key"]),
+            )
+            return
+
+        if payload == "ai:action:input_key":
+            if user_id:
+                self._user_states[user_id] = "WAIT_API_KEY"
+            prov_name = PROVIDER_NAMES.get(ai_analyst.api_provider, ai_analyst.api_provider)
+            text = (
+                f"🔑 <b>Ввод API-ключа для {prov_name}</b>\n\n"
+                "Отправьте ваш API-ключ следующим сообщением в этот чат.\n"
+                "Ключ будет сохранен локально в защищенной конфигурации бота.\n\n"
+                "<i>Для отмены нажмите кнопку ниже:</i>"
+            )
+            await max_client.send_message(
+                text=text,
+                chat_id=chat_id,
+                user_id=user_id,
+                keyboard=get_max_cancel_keyboard("ai:menu:api"),
+            )
+            return
+
+        if payload == "ai:menu:local":
+            ollama_status = await ai_analyst.check_ollama()
+            online_str = "🟢 Онлайн" if ollama_status["online"] else "🔴 Недоступен"
+            models_str = ", ".join(ollama_status["models"]) if ollama_status["models"] else "нет загруженных моделей"
+            text = (
+                "💻 <b>Локальная нейросеть (Ollama)</b>\n\n"
+                "Анализ данных выполняется полностью локально на вашем оборудовании без передачи информации в облако.\n\n"
+                f"• Адрес Ollama: <code>{ai_analyst.ollama_base_url}</code>\n"
+                f"• Статус сервиса: <b>{online_str}</b>\n"
+                f"• Доступные модели: <code>{models_str}</code>\n"
+                f"• Выбранная модель: <code>{ai_analyst.ollama_model}</code>\n\n"
+                f"<i>{ollama_status['message']}</i>"
+            )
+            await max_client.send_message(
+                text=text,
+                chat_id=chat_id,
+                user_id=user_id,
+                keyboard=get_max_ai_local_keyboard(ollama_status["online"], ai_analyst.ollama_model),
+            )
+            return
+
+        if payload == "ai:set:local:activate":
+            ai_analyst.set_mode("local")
+            ollama_status = await ai_analyst.check_ollama()
+            warn = "" if ollama_status["online"] else "\n\n⚠️ <i>Сервис Ollama сейчас офлайн. Если он не будет запущен, система автоматически использует резервный алгоритмический анализ.</i>"
+            text = (
+                f"✅ <b>Активирован режим: Локальная нейросеть (Ollama)</b>\n\n"
+                f"• Модель: <code>{ai_analyst.ollama_model}</code>\n"
+                f"• Хост: <code>{ai_analyst.ollama_base_url}</code>{warn}"
+            )
+            await max_client.send_message(
+                text=text,
+                chat_id=chat_id,
+                user_id=user_id,
+                keyboard=get_max_ai_local_keyboard(ollama_status["online"], ai_analyst.ollama_model),
+            )
+            return
+
+        if payload == "ai:action:check_ollama":
+            ollama_status = await ai_analyst.check_ollama()
+            icon = "🟢" if ollama_status["online"] else "🔴"
+            text = (
+                f"{icon} <b>Результат проверки Ollama:</b>\n\n"
+                f"• Адрес: <code>{ai_analyst.ollama_base_url}</code>\n"
+                f"• Статус: <b>{'Сервис доступен' if ollama_status['online'] else 'Сервис недоступен'}</b>\n"
+                f"• Модели: <code>{', '.join(ollama_status['models']) if ollama_status['models'] else 'не найдены'}</code>"
+            )
+            await max_client.send_message(
+                text=text,
+                chat_id=chat_id,
+                user_id=user_id,
+                keyboard=get_max_ai_local_keyboard(ollama_status["online"], ai_analyst.ollama_model),
+            )
+            return
+
+        if payload == "ai:action:input_ollama_model":
+            if user_id:
+                self._user_states[user_id] = "WAIT_OLLAMA_MODEL"
+            text = (
+                "✏️ <b>Смена модели Ollama</b>\n\n"
+                f"Текущая модель: <code>{ai_analyst.ollama_model}</code>\n\n"
+                "Отправьте имя желаемой модели следующим сообщением (например: <code>llama3</code>, <code>qwen2.5</code>, <code>mistral</code>, <code>deepseek-r1</code>).\n\n"
+                "<i>Для отмены нажмите кнопку ниже:</i>"
+            )
+            await max_client.send_message(
+                text=text,
+                chat_id=chat_id,
+                user_id=user_id,
+                keyboard=get_max_cancel_keyboard("ai:menu:local"),
             )
             return
 
@@ -638,6 +842,29 @@ class MAXDispatcher:
                 user_id=user_id,
                 keyboard=get_max_refresh_keyboard(),
             )
+
+
+    async def _render_ai_panel(self, chat_id: Optional[int], user_id: Optional[int]) -> None:
+        """Render AI & Analytics engine control panel."""
+        st = ai_analyst.get_status()
+        active_model = st['api_model'] if st['mode'] == 'api' else (st['ollama_model'] if st['mode'] == 'local' else 'Встроенные правила')
+        text = (
+            "🧠 <b>Панель управления AI и аналитикой данных</b>\n\n"
+            "Здесь вы можете выбрать, какой движок анализирует метрики вашего бизнеса "
+            "и формулирует выводы для управленческих отчетов:\n\n"
+            f"⚙️ <b>Текущий активный режим:</b>\n"
+            f"• <b>{st['mode_title']}</b>\n"
+            f"• Провайдер: <b>{st['api_provider_name']}</b>\n"
+            f"• Модель: <code>{active_model}</code>\n"
+            f"• API-ключ: <code>{st['api_key_masked']}</code>\n\n"
+            "Выберите желаемый режим работы ниже:"
+        )
+        await max_client.send_message(
+            text=text,
+            chat_id=chat_id,
+            user_id=user_id,
+            keyboard=get_max_ai_panel_keyboard(st["mode"], st["api_provider"]),
+        )
 
 
 max_dispatcher = MAXDispatcher()
