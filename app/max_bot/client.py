@@ -77,6 +77,7 @@ class MAXClient:
         user_id: Optional[int] = None,
         keyboard: Optional[Dict[str, Any]] = None,
         attachments: Optional[List[Dict[str, Any]]] = None,
+        format: Optional[str] = "markdown",
     ) -> Optional[Dict[str, Any]]:
         """Send a message to a MAX chat or user, optionally with inline keyboard or attachments."""
         if not self.is_configured():
@@ -100,6 +101,8 @@ class MAXClient:
         # Ensure text is converted to clean Markdown for MAX Messenger
         markdown_text = html_to_max_markdown(text) if text else ""
         payload: Dict[str, Any] = {"text": markdown_text}
+        if format:
+            payload["format"] = format
         if all_attachments:
             payload["attachments"] = all_attachments
 

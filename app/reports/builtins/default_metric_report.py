@@ -21,8 +21,8 @@ class DefaultMetricReport(BaseReport):
     """General-purpose report analyzing all metrics within the designated window."""
 
     report_id = "default_metric_report"
-    display_name = "🌐 Universal Metrics Overview"
-    description = "Holistic executive breakdown and trends for all active numerical metrics"
+    display_name = "Обзор ключевых метрик"
+    description = "Комплексный анализ и динамика всех операционных и финансовых показателей бизнеса"
 
     async def fetch_data(
         self,
@@ -335,13 +335,13 @@ class DefaultMetricReport(BaseReport):
         ai_summary: Optional[str] = None,
     ) -> str:
         metrics = data.get("metrics", {})
-        label = data.get("date_range_label", "Selected Period")
+        label = data.get("date_range_label", "Выбранный период")
 
         lines = [
             f"📊 <b>{self.display_name}</b>",
-            f"🗓 <i>Period: {label}</i>",
+            f"🗓 <i>Период: {label}</i>",
             "",
-            "<b>Key Metrics:</b>",
+            "<b>Ключевые показатели:</b>",
         ]
 
         for m in list(metrics.values())[:5]:
@@ -353,7 +353,7 @@ class DefaultMetricReport(BaseReport):
 
         if ai_summary:
             lines.append("")
-            lines.append("🧠 <b>Executive Briefing:</b>")
+            lines.append("🧠 <b>Аналитический инсайт AI:</b>")
             lines.append(ai_summary)
 
         return "\n".join(lines)

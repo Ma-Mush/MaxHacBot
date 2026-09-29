@@ -543,16 +543,24 @@ class MAXDispatcher:
             )
             return
 
+        range_labels = {
+            "today": "Сегодня",
+            "yesterday": "Вчера",
+            "last_7_days": "Последние 7 дней",
+            "last_30_days": "Последние 30 дней",
+            "this_month": "Текущий месяц",
+        }
+        date_label = range_labels.get(date_range, date_range)
+
         await max_client.send_action(chat_id=chat_id, user_id=user_id, action="typing")
         await max_client.send_message(
-            text=f"⏳ <i>Формирую отчет «{report.display_name}» ({date_range}). Пожалуйста, подождите...</i>",
+            text=f"⏳ <i>Формирую отчет «{report.display_name}» ({date_label}). Пожалуйста, подождите...</i>",
             chat_id=chat_id,
             user_id=user_id,
         )
 
         try:
             start_date, end_date = parse_date_range(date_range)
-            date_label = date_range.replace("_", " ").title()
 
             if format_type == "all":
                 req_formats = ["png", "pdf", "excel"]

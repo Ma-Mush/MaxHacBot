@@ -37,7 +37,9 @@ def get_max_reports_keyboard() -> Dict[str, Any]:
     rows: List[List[Dict[str, Any]]] = []
 
     for report in reports:
-        rows.append([create_callback_button(report.display_name, f"rep:sel:{report.report_id}")])
+        icon = "📈" if "ecommerce" in report.report_id else "📊"
+        title = report.display_name if report.display_name.startswith(("📈", "📊", "🌐")) else f"{icon} {report.display_name}"
+        rows.append([create_callback_button(title, f"rep:sel:{report.report_id}")])
 
     rows.append([create_callback_button("📦 Импортировать с маркетплейса", "rep:menu:marketplaces")])
     rows.append([create_callback_button("🔄 Обновить список плагинов", "rep:refresh")])

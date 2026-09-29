@@ -21,8 +21,8 @@ class EcommerceSummaryReport(BaseReport):
     """Executive e-commerce business performance briefing with revenue, orders, AOV, and channel dynamics."""
 
     report_id = "ecommerce_summary"
-    display_name = "📈 Executive E-Commerce Briefing"
-    description = "Revenue trajectory, order volume, average order value (AOV), refunds, and channel efficiency"
+    display_name = "Итоговая сводка E-Commerce"
+    description = "Динамика выручки, объем заказов, средний чек (AOV), возвраты и эффективность каналов"
 
     async def fetch_data(
         self,
@@ -483,26 +483,26 @@ class EcommerceSummaryReport(BaseReport):
         ai_summary: Optional[str] = None,
     ) -> str:
         s = data.get("summary", {})
-        label = data.get("date_range_label", "Selected Period")
+        label = data.get("date_range_label", "Выбранный период")
 
         rev_arrow = "🟢 ▲" if s.get("revenue_delta", 0) >= 0 else "🔴 ▼"
         ord_arrow = "🟢 ▲" if s.get("orders_delta", 0) >= 0 else "🔴 ▼"
 
         lines = [
             f"📈 <b>{self.display_name}</b>",
-            f"🗓 <i>Window: {label}</i>",
+            f"🗓 <i>Период: {label}</i>",
             "",
-            "<b>Executive KPIs:</b>",
-            f"• 💰 <b>Revenue</b>: <code>${s.get('revenue', 0):,.2f}</code> ({rev_arrow} {abs(s.get('revenue_delta', 0)):.1f}%)",
-            f"• 📦 <b>Orders</b>: <code>{s.get('orders', 0):,}</code> ({ord_arrow} {abs(s.get('orders_delta', 0)):.1f}%)",
-            f"• 🛒 <b>AOV</b>: <code>${s.get('aov', 0):,.2f}</code>",
-            f"• 🔄 <b>Refund Rate</b>: <code>{s.get('refund_rate', 0):.1f}%</code>",
-            f"• 🎯 <b>Conversion Rate</b>: <code>{s.get('conversion_rate', 0):.2f}%</code>",
+            "<b>Ключевые показатели (KPI):</b>",
+            f"• 💰 <b>Выручка</b>: <code>{s.get('revenue', 0):,.2f} ₽</code> ({rev_arrow} {abs(s.get('revenue_delta', 0)):.1f}%)",
+            f"• 📦 <b>Заказы</b>: <code>{s.get('orders', 0):,} шт.</code> ({ord_arrow} {abs(s.get('orders_delta', 0)):.1f}%)",
+            f"• 🛒 <b>Средний чек (AOV)</b>: <code>{s.get('aov', 0):,.2f} ₽</code>",
+            f"• 🔄 <b>Доля возвратов</b>: <code>{s.get('refund_rate', 0):.1f}%</code>",
+            f"• 🎯 <b>Конверсия</b>: <code>{s.get('conversion_rate', 0):.2f}%</code>",
         ]
 
         if ai_summary:
             lines.append("")
-            lines.append("🧠 <b>Executive Intelligence Briefing:</b>")
+            lines.append("🧠 <b>Аналитический инсайт AI:</b>")
             lines.append(ai_summary)
 
         return "\n".join(lines)

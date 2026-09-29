@@ -60,8 +60,8 @@ async def test_ecommerce_summary_execution(db_session: AsyncSession):
 
     # Test Telegram caption
     caption = report.format_telegram_caption(data, ai_summary="• 🚀 Test summary")
-    assert "Executive E-Commerce Briefing" in caption
-    assert "$4,000.00" in caption
+    assert "Итоговая сводка E-Commerce" in caption
+    assert "4,000.00 ₽" in caption
     assert "Test summary" in caption
 
     # Test Excel generation
