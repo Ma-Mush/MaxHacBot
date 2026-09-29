@@ -517,6 +517,57 @@ class {class_name}(BaseReport):
     click.echo("This report will be auto-discovered by OmniMetrics Hub!")
 
 
+@cli.command("ai-status")
+def ai_status_cmd():
+    """Show current AI Analyst configuration, active mode, and provider status."""
+    from app.services.ai_analyst import ai_analyst, PROVIDER_NAMES
+    st = ai_analyst.get_status()
+    click.secho("\n🧠 OmniMetrics AI Analyst Status:", fg="cyan", bold=True)
+    click.echo(f"   Режим работы:      {st['mode_title']}")
+    click.echo(f"   Текущий режим:     {st['mode']} (heuristic / api / local)")
+    click.echo(f"   Облачный провайдер: {PROVIDER_NAMES.get(st['api_provider'], st['api_provider'])} [модель: {st['api_model']}]")
+    click.echo(f"   API-ключ:          {st['api_key_masked']}")
+    click.echo(f"   Локальная Ollama:  {st['ollama_model']} @ {st['ollama_url']}")
+
+    async def _check():
+        ollama_info = await ai_analyst.check_ollama()
+        if ollama_info["online"]:
+            click.secho(f"   Ollama Daemon:     ✅ Онлайн ({ollama_info['message']})\n", fg="green")
+        else:
+            click.secho(f"   Ollama Daemon:     ⚠️ Офлайн ({ollama_info['message']})\n", fg="yellow")
+
+    run_async(_check())
+
+
+@cli.command("set-ai")
+@click.option("--mode", type=click.Choice(["heuristic", "api", "local"]), help="Active engine mode.")
+@click.option("--provider", type=click.Choice(["openai", "deepseek", "gigachat", "groq", "anthropic"]), help="Cloud LLM provider.")
+@click.option("--api-key", default=None, help="API key for cloud provider.")
+@click.option("--ollama-model", default=None, help="Model name for local Ollama.")
+@click.option("--ollama-url", default=None, help="URL for local Ollama daemon.")
+def set_ai_cmd(mode: Optional[str], provider: Optional[str], api_key: Optional[str], ollama_model: Optional[str], ollama_url: Optional[str]):
+    """Configure AI engine mode, cloud API credentials, or local Ollama settings."""
+    from app.services.ai_analyst import ai_analyst
+    if provider:
+        ai_analyst.set_api_provider(provider)
+        click.secho(f"✅ Cloud provider set to: {provider}", fg="green")
+    if api_key and provider:
+        ai_analyst.set_api_key(provider, api_key)
+        click.secho(f"🔑 API key saved for: {provider}", fg="green")
+    elif api_key:
+        ai_analyst.set_api_key(ai_analyst.api_provider, api_key)
+        click.secho(f"🔑 API key saved for current provider: {ai_analyst.api_provider}", fg="green")
+    if ollama_model or ollama_url:
+        ai_analyst.set_local_model(ollama_model or ai_analyst.ollama_model, ollama_url or ai_analyst.ollama_base_url)
+        click.secho(f"💻 Ollama model set to: {ai_analyst.ollama_model}", fg="green")
+    if mode:
+        ai_analyst.set_mode(mode)
+        click.secho(f"🚀 AI mode switched to: {mode}", fg="green", bold=True)
+
+    st = ai_analyst.get_status()
+    click.echo(f"Active Mode: {st['mode_title']}\n")
+
+
 @cli.command("run-api")
 @click.option("--host", default="0.0.0.0", help="Host address to bind to.")
 @click.option("--port", default=8000, help="Port to listen on.")
