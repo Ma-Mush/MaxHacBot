@@ -144,6 +144,33 @@ def seed_demo(days: int, clear: bool):
     run_async(_seed())
 
 
+@cli.command("import-csv")
+@click.argument("file_path", type=click.Path(exists=True))
+@click.option("--unit", default="RUB", help="Currency or unit (default: RUB).")
+def import_csv_cmd(file_path: str, unit: str):
+    """Import transactions and metrics from a CSV or Excel (.xlsx) file into the database."""
+    async def _import():
+        await init_db()
+        from app.services.csv_importer import csv_importer
+        p = Path(file_path)
+        data = p.read_bytes()
+        click.secho(f"\n📥 Ingesting file '{p.name}'...", fg="cyan", bold=True)
+        res = await csv_importer.import_data(data, p.name, default_unit=unit)
+        if not res.get("success"):
+            click.secho(f"❌ Import failed: {res.get('error')}", fg="red")
+            return
+        click.secho(f"✅ Successfully ingested {res['metrics_created']} metric records from {res['total_rows']} rows!", fg="green", bold=True)
+        click.echo(f"   📅 Time Window: {res['date_from']} -> {res['date_to']}")
+        click.echo(f"   💰 Revenue:     {res['total_revenue']:,.2f} {unit}")
+        click.echo(f"   📦 Orders:      {res['total_orders']}")
+        if res.get("channels"):
+            click.echo(f"   📊 Channels:    {', '.join(res['channels'])}")
+        click.secho("\n✨ Data ready! Run 'python cli.py test-report ecommerce_summary' to generate briefing.\n", fg="cyan")
+        await close_db()
+
+    run_async(_import())
+
+
 @cli.command("list-reports")
 def list_reports():
     """List all registered report plugins and their metadata."""

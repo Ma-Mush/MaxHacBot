@@ -1,7 +1,7 @@
 """Universal metrics ingestion and metadata endpoints."""
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import distinct, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -72,6 +72,24 @@ async def ingest_metrics_batch(
         status="success",
         message=f"Successfully ingested {len(records)} metric records.",
     )
+
+
+@router.post(
+    "/upload-csv",
+    summary="Upload and ingest CSV or Excel (.xlsx) file",
+    dependencies=[Depends(verify_api_key)],
+)
+async def upload_metrics_file(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload and parse an external CSV or Excel file containing sales or metric data."""
+    from app.services.csv_importer import csv_importer
+    contents = await file.read()
+    res = await csv_importer.import_data(contents, file.filename or "uploaded_data.csv", session=db)
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error", "Failed to parse file."))
+    return res
 
 
 @router.get(

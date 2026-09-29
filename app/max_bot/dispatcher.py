@@ -105,6 +105,16 @@ class MAXDispatcher:
                 "— 🚀 All-in-One: все форматы одним пакетом"
             )
             await max_client.send_message(text=help_text, chat_id=chat_id, user_id=user_id)
+        elif cmd in ("/import", "импорт", "загрузка"):
+            import_info = (
+                "📥 <b>Импорт реальных данных в OmniMetrics Hub:</b>\n\n"
+                "Вы можете отправить файл выгрузки прямо в этот диалог:\n"
+                "• 📦 Отчёты о продажах из <b>Wildberries</b> или <b>Ozon</b> (.csv / .xlsx)\n"
+                "• 📊 Выгрузка чеков и выручки из <b>1С</b> или <b>МойСклад</b>\n"
+                "• 📈 Любая таблица со столбцами: <i>Дата, Выручка, Заказы, Канал, Регион</i>\n\n"
+                "📎 <i>Просто прикрепите файл к сообщению или скопируйте строки таблицы сюда текстом.</i>"
+            )
+            await max_client.send_message(text=import_info, chat_id=chat_id, user_id=user_id)
         elif cmd in ("/status", "статус"):
             reports_count = len(report_registry.list_reports())
             status_text = (
@@ -121,18 +131,140 @@ class MAXDispatcher:
                 user_id=user_id,
                 keyboard=get_max_refresh_keyboard(),
             )
+        elif "\n" in text and (";" in text or "," in text) and any(w in text.lower() for w in ("date", "дата", "revenue", "выручка", "цена", "заказ", "orders")):
+            # Direct CSV text pasted into chat
+            await self._handle_raw_csv_text(text, chat_id, user_id)
         else:
-            # Natural language conversational fallback
-            ai_reply = (
-                f"💬 Вы написали: «<i>{text}</i>»\n\n"
-                "Я готов сформировать для вас детальный срез метрик бизнеса. "
-                "Нажмите кнопку ниже, чтобы выбрать отчет и временное окно:"
+            # Check if message contains file attachments
+            attachments = msg.get("attachments") or body.get("attachments") or []
+            file_found = False
+            for att in attachments:
+                att_type = att.get("type")
+                payload = att.get("payload", {})
+                file_url = payload.get("url") or payload.get("download_url")
+                filename = payload.get("name") or payload.get("filename") or "sales_data.csv"
+
+                if file_url and (att_type in ("file", "document") or filename.lower().endswith((".csv", ".xlsx", ".xls"))):
+                    file_found = True
+                    await self._handle_file_import(file_url, filename, chat_id, user_id)
+                    break
+
+            if not file_found:
+                # Natural language conversational fallback
+                ai_reply = (
+                    f"💬 Вы написали: «<i>{text}</i>»\n\n"
+                    "Я готов сформировать для вас детальный срез метрик бизнеса или импортировать данные. "
+                    "Отправьте мне файл выгрузки продаж (.csv/.xlsx) или выберите отчет по кнопке ниже:"
+                )
+                await max_client.send_message(
+                    text=ai_reply,
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    keyboard=get_max_reports_keyboard(),
+                )
+
+    async def _handle_file_import(
+        self,
+        file_url: str,
+        filename: str,
+        chat_id: Optional[int],
+        user_id: Optional[int],
+    ) -> None:
+        """Download and ingest incoming CSV/Excel file, then trigger instant executive report."""
+        import httpx
+        from app.services.csv_importer import csv_importer
+
+        await max_client.send_action(chat_id=chat_id, user_id=user_id, action="typing")
+        await max_client.send_message(
+            text=f"📥 <i>Загружаю и анализирую входящий файл «{filename}»...</i>",
+            chat_id=chat_id,
+            user_id=user_id,
+        )
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(file_url)
+                resp.raise_for_status()
+                file_bytes = resp.content
+
+            res = await csv_importer.import_data(file_bytes, filename)
+            if not res.get("success"):
+                await max_client.send_message(
+                    text=f"❌ <b>Ошибка импорта:</b> {res.get('error')}",
+                    chat_id=chat_id,
+                    user_id=user_id,
+                )
+                return
+
+            summary_text = (
+                f"✅ <b>Файл «{filename}» успешно обработан!</b>\n\n"
+                f"• 📊 <b>Импортировано метрик:</b> <code>{res['metrics_created']}</code> (из {res['total_rows']} строк)\n"
+                f"• 💰 <b>Выручка за период:</b> <code>₽{res['total_revenue']:,.2f}</code>\n"
+                f"• 📦 <b>Количество заказов:</b> <code>{res['total_orders']}</code>\n"
+                f"• 🗓 <b>Временное окно:</b> <code>{res['date_from']} → {res['date_to']}</code>\n"
+                f"• 📈 <b>Каналы трафика:</b> {', '.join(res.get('channels', [])) or 'Общий'}\n\n"
+                "🚀 <i>Генерирую управленческий PDF-отчёт и AI-выжимку по загруженным данным...</i>"
             )
-            await max_client.send_message(
-                text=ai_reply,
+            await max_client.send_message(text=summary_text, chat_id=chat_id, user_id=user_id)
+
+            # Auto-deliver report
+            await self._execute_and_send_report(
+                report_id="ecommerce_summary",
+                date_range="last_30_days",
+                format_type="all",
                 chat_id=chat_id,
                 user_id=user_id,
-                keyboard=get_max_reports_keyboard(),
+            )
+        except Exception as exc:
+            logger.error(f"Error importing file attachment: {exc}", exc_info=True)
+            await max_client.send_message(
+                text=f"❌ <b>Ошибка при чтении файла:</b>\n<code>{str(exc)}</code>",
+                chat_id=chat_id,
+                user_id=user_id,
+            )
+
+    async def _handle_raw_csv_text(
+        self,
+        raw_text: str,
+        chat_id: Optional[int],
+        user_id: Optional[int],
+    ) -> None:
+        """Parse raw CSV text pasted directly into chat."""
+        from app.services.csv_importer import csv_importer
+
+        await max_client.send_action(chat_id=chat_id, user_id=user_id, action="typing")
+        try:
+            res = await csv_importer.import_data(raw_text.encode("utf-8"), "pasted_text.csv")
+            if not res.get("success"):
+                await max_client.send_message(
+                    text=f"⚠️ <b>Не удалось распарсить таблицу:</b>\n{res.get('error')}",
+                    chat_id=chat_id,
+                    user_id=user_id,
+                )
+                return
+
+            msg_text = (
+                "✅ <b>Таблица из текста успешно импортирована!</b>\n\n"
+                f"• 📊 <b>Записей создано:</b> <code>{res['metrics_created']}</code>\n"
+                f"• 💰 <b>Выручка:</b> <code>₽{res['total_revenue']:,.2f}</code>\n"
+                f"• 📦 <b>Заказов:</b> <code>{res['total_orders']}</code>\n\n"
+                "Строю аналитическую сводку..."
+            )
+            await max_client.send_message(text=msg_text, chat_id=chat_id, user_id=user_id)
+
+            await self._execute_and_send_report(
+                report_id="ecommerce_summary",
+                date_range="last_30_days",
+                format_type="all",
+                chat_id=chat_id,
+                user_id=user_id,
+            )
+        except Exception as exc:
+            logger.error(f"Error importing pasted CSV text: {exc}", exc_info=True)
+            await max_client.send_message(
+                text=f"❌ Ошибка парсинга таблицы: <code>{str(exc)}</code>",
+                chat_id=chat_id,
+                user_id=user_id,
             )
 
     async def _handle_message_callback(self, update: Dict[str, Any]) -> None:
