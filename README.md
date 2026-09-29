@@ -388,6 +388,7 @@ All artifacts (`.pdf`, `.xlsx`, `.png`, and caption) will be generated into `./o
 | `python cli.py sync-wb [--days 14] [--mock]` | Synchronize sales and returns directly from Wildberries Statistics API / sandbox |
 | `python cli.py sync-ozon [--days 14] [--mock]` | Synchronize postings and revenue directly from Ozon Seller API / sandbox |
 | `python cli.py sync-yandex [--days 14] [--mock]` | Synchronize orders and sales directly from Yandex Market Partner API / sandbox |
+| `python cli.py sync-sbermarket [--days 14] [--mock]` | Synchronize retail orders and GMV directly from SberMarket / Kuper API / sandbox |
 | `python cli.py seed-demo [--days 60]` | Seed historical e-commerce and server metrics |
 | `python cli.py list-reports` | List all registered and discovered plugins |
 | `python cli.py test-report <report_id> [--days 7]` | Generate PDF, Excel, and PNG artifacts into `./output/` |
@@ -399,9 +400,9 @@ All artifacts (`.pdf`, `.xlsx`, `.png`, and caption) will be generated into `./o
 
 ---
 
-## 🛒 Marketplace Connectors (Wildberries, Ozon & Yandex.Маркет)
+## 🛒 Marketplace Connectors (WB, Ozon, Яндекс.Маркет, СберМаркет/Купер)
 
-OmniMetrics Hub features native integrations with major Russian e-commerce marketplaces:
+OmniMetrics Hub features native integrations with all major Russian e-commerce and delivery platforms:
 
 ### 1. Wildberries Statistics API
 - **Endpoint**: `https://statistics-api.wildberries.ru/api/v1/supplier/sales`
@@ -414,13 +415,18 @@ OmniMetrics Hub features native integrations with major Russian e-commerce marke
 - **CLI**: `python cli.py sync-ozon [--days 14] [--mock]`
 - **MAX Bot**: `/ozon` or button `🔵 Синхронизировать Ozon`
 - **REST**: `POST /api/v1/connectors/ozon/sync`, `GET /api/v1/connectors/ozon/status`
-- **Key Capabilities**: Pulls FBS/FBO shipments, cluster delivery logistics, fulfillment warehouse metrics, and financial reconciliations.
 
 ### 3. Yandex Market Partner API
 - **Endpoint**: `https://api.partner.market.yandex.ru/campaigns/{campaign_id}/orders`
 - **CLI**: `python cli.py sync-yandex [--days 14] [--mock]`
 - **MAX Bot**: `/yandex` or button `🟡 Синхронизировать Яндекс.Маркет`
 - **REST**: `POST /api/v1/connectors/yandex-market/sync`, `GET /api/v1/connectors/yandex-market/status`
+
+### 4. SberMarket (Kuper) Merchant API
+- **Endpoint**: `https://api.sbermarket.ru/v1/merchant/orders`
+- **CLI**: `python cli.py sync-sbermarket [--days 14] [--mock]`
+- **MAX Bot**: `/sbermarket` (или `/kuper`) or button `🟢 Синхронизировать СберМаркет (Купер)`
+- **REST**: `POST /api/v1/connectors/sbermarket/sync`, `GET /api/v1/connectors/sbermarket/status`
 - **Fail-Safe Sandbox**: Fully functional mock dataset generation for instant live jury testing across all channels.
 
 ---

@@ -42,6 +42,7 @@ def get_max_reports_keyboard() -> Dict[str, Any]:
     rows.append([create_callback_button("🟣 Синхронизировать Wildberries", "rep:sync:wb")])
     rows.append([create_callback_button("🔵 Синхронизировать Ozon", "rep:sync:ozon")])
     rows.append([create_callback_button("🟡 Синхронизировать Яндекс.Маркет", "rep:sync:yandex")])
+    rows.append([create_callback_button("🟢 Синхронизировать СберМаркет (Купер)", "rep:sync:sbermarket")])
     rows.append([create_callback_button("🔄 Обновить список плагинов", "rep:refresh")])
     return build_keyboard_attachment(rows)
 
@@ -93,7 +94,10 @@ def get_max_refresh_keyboard() -> Dict[str, Any]:
         [
             create_callback_button("🟣 WB", "rep:sync:wb"),
             create_callback_button("🔵 Ozon", "rep:sync:ozon"),
-            create_callback_button("🟡 Яндекс.Маркет", "rep:sync:yandex"),
+        ],
+        [
+            create_callback_button("🟡 Яндекс", "rep:sync:yandex"),
+            create_callback_button("🟢 Купер (Сбер)", "rep:sync:sbermarket"),
         ],
         [create_callback_button("📊 Вернуться в меню отчетов", "rep:back:reports")],
     ])

@@ -14,6 +14,7 @@ from app.max_bot.keyboards import (
     get_max_reports_keyboard,
 )
 from app.connectors.ozon import ozon_connector
+from app.connectors.sbermarket import sbermarket_connector
 from app.connectors.wildberries import wb_connector
 from app.connectors.yandex_market import ym_connector
 from app.reports.engine import report_engine
@@ -102,6 +103,7 @@ class MAXDispatcher:
                 "• <b>/wb</b> — синхронизация статистики продаж с Wildberries API\n"
                 "• <b>/ozon</b> — синхронизация отправлений с Ozon Seller API\n"
                 "• <b>/yandex</b> — синхронизация заказов с Яндекс.Маркетом\n"
+                "• <b>/sbermarket</b> (или <b>/kuper</b>) — синхронизация заказов со СберМаркет (Купер)\n"
                 "• <b>/status</b> — проверка статуса сбора метрик и подключений\n"
                 "• <b>/start</b> — перезапустить интерактивное меню\n\n"
                 "📦 <b>Доступные форматы:</b>\n"
@@ -116,6 +118,7 @@ class MAXDispatcher:
             wb_state = "Подключен (API)" if wb_connector.is_configured() else "Песочница / Mock"
             ozon_state = "Подключен (API)" if ozon_connector.is_configured() else "Песочница / Mock"
             ym_state = "Подключен (API)" if ym_connector.is_configured() else "Песочница / Mock"
+            sm_state = "Подключен (API)" if sbermarket_connector.is_configured() else "Песочница / Mock"
             status_text = (
                 "🟢 <b>Система OmniMetrics Hub активна</b>\n\n"
                 f"• Платформа: <b>Мессенджер МАКС</b>\n"
@@ -124,6 +127,7 @@ class MAXDispatcher:
                 f"• Коннектор Wildberries: <b>{wb_state}</b>\n"
                 f"• Коннектор Ozon: <b>{ozon_state}</b>\n"
                 f"• Коннектор Яндекс.Маркет: <b>{ym_state}</b>\n"
+                f"• Коннектор СберМаркет (Купер): <b>{sm_state}</b>\n"
                 f"• База данных: <b>Подключена</b>\n"
                 f"• Шедулер регламентных рассылок: <b>Активен</b>"
             )
@@ -139,6 +143,8 @@ class MAXDispatcher:
             await self._handle_ozon_sync(chat_id=chat_id, user_id=user_id)
         elif cmd in ("/yandex", "yandex", "яндекс", "маркет"):
             await self._handle_ym_sync(chat_id=chat_id, user_id=user_id)
+        elif cmd in ("/sbermarket", "/kuper", "sbermarket", "kuper", "сбермаркет", "купер"):
+            await self._handle_sm_sync(chat_id=chat_id, user_id=user_id)
         else:
             # Natural language conversational fallback
             ai_reply = (
@@ -197,6 +203,10 @@ class MAXDispatcher:
 
         if payload == "rep:sync:yandex":
             await self._handle_ym_sync(chat_id=chat_id, user_id=user_id)
+            return
+
+        if payload == "rep:sync:sbermarket":
+            await self._handle_sm_sync(chat_id=chat_id, user_id=user_id)
             return
 
         # 2. Selected a report -> show date range picker
@@ -438,6 +448,63 @@ class MAXDispatcher:
             logger.error(f"Error during Yandex Market sync in MAX: {exc}", exc_info=True)
             await max_client.send_message(
                 text=f"❌ <b>Ошибка при синхронизации Яндекс.Маркета:</b>\n<code>{str(exc)}</code>",
+                chat_id=chat_id,
+                user_id=user_id,
+                keyboard=get_max_refresh_keyboard(),
+            )
+
+    async def _handle_sm_sync(self, chat_id: Optional[int], user_id: Optional[int]) -> None:
+        """Fetch orders from SberMarket / Kuper Merchant API and deliver executive briefing."""
+        await max_client.send_action(chat_id=chat_id, user_id=user_id, action="typing")
+        await max_client.send_message(
+            text="🔄 <b>Запуск синхронизации со СберМаркет (Купер)...</b>\n"
+                 "<i>Запрашиваю заказы розницы, GMV и обновляю метрики в базе...</i>",
+            chat_id=chat_id,
+            user_id=user_id,
+        )
+
+        try:
+            from datetime import timedelta, timezone
+            end_d = datetime.now(timezone.utc)
+            start_d = end_d - timedelta(days=14)
+
+            async with async_session_maker() as session:
+                res = await sbermarket_connector.fetch_and_ingest(
+                    start_date=start_d,
+                    end_date=end_d,
+                    session=session,
+                )
+
+            mode_str = "Боевой API СберМаркет" if res.get("mode") == "live_api" else "Песочница / Mock-генератор"
+            top_city = list(res.get("top_cities", {}).keys())[0] if res.get("top_cities") else "—"
+            top_store = list(res.get("top_stores", {}).keys())[0] if res.get("top_stores") else "—"
+            aov = res["total_revenue"] / res["total_orders"] if res.get("total_orders") else 0.0
+
+            summary_msg = (
+                "🟢 <b>Синхронизация со СберМаркет (Купер) завершена!</b>\n\n"
+                f"• Режим источника: <b>{mode_str}</b>\n"
+                f"• Заказов получено: <b>{res.get('total_orders', 0)}</b>\n"
+                f"• Выручка: <b>{res.get('total_revenue', 0.0):,.2f} ₽</b>\n"
+                f"• Возвраты: <b>{res.get('total_refunds', 0.0):,.2f} ₽</b>\n"
+                f"• Средний чек (AOV): <b>{aov:,.2f} ₽</b>\n"
+                f"• Ключевой город: <b>{top_city}</b>\n"
+                f"• Лидирующий даркстор/магазин: <b>{top_store}</b>\n\n"
+                "📄 <i>Генерирую управленческий отчет, графики и Excel...</i>"
+            )
+            await max_client.send_message(text=summary_msg, chat_id=chat_id, user_id=user_id)
+
+            rep_id = "ecommerce_summary" if report_registry.get("ecommerce_summary") else "revenue_executive"
+            await self._execute_and_send_report(
+                report_id=rep_id,
+                date_range="last_30_days",
+                format_type="all",
+                chat_id=chat_id,
+                user_id=user_id,
+            )
+        except Exception as exc:
+            logger.error(f"Error during SberMarket sync in MAX: {exc}", exc_info=True)
+            await max_client.send_message(
+                text=f"❌ <b>Ошибка при синхронизации СберМаркета:</b>\n<code>{str(exc)}</code>",
                 chat_id=chat_id,
                 user_id=user_id,
                 keyboard=get_max_refresh_keyboard(),
