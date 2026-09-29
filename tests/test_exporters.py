@@ -104,8 +104,8 @@ async def test_ai_analyst_heuristic_summary():
         "deltas": {"revenue": 18.5, "refunds": -4.2},
     }
     summary = await ai_analyst.generate_summary("E-Commerce Test", metrics_summary)
-    assert "Key Gain" in summary
-    assert "Drop / Friction Point" in summary
-    assert "Anomaly / Pattern" in summary
-    assert "Recommended Action" in summary
+    assert "Главный рост" in summary
+    assert "Точка внимания" in summary
+    assert "Паттерн / Аномалия" in summary
+    assert "Рекомендация" in summary
     assert "•" in summary

@@ -1,11 +1,37 @@
 """Async HTTP client for MAX Messenger Platform API (https://platform-api2.max.ru)."""
+import asyncio
+import html
 import logging
+import re
 from typing import Any, Dict, List, Optional
 import httpx
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def html_to_max_markdown(text: str) -> str:
+    """Convert HTML-formatted messages to MAX Messenger Markdown markup."""
+    if not text:
+        return ""
+    # Line breaks
+    s = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    # Bold tags
+    s = re.sub(r"<(?:b|strong)>(.*?)</(?:b|strong)>", r"**\1**", s, flags=re.IGNORECASE | re.DOTALL)
+    # Italic tags
+    s = re.sub(r"<(?:i|em)>(.*?)</(?:i|em)>", r"*\1*", s, flags=re.IGNORECASE | re.DOTALL)
+    # Inline code
+    s = re.sub(r"<code>(.*?)</code>", r"`\1`", s, flags=re.IGNORECASE | re.DOTALL)
+    # Code block
+    s = re.sub(r"<pre>(.*?)</pre>", r"```\n\1\n```", s, flags=re.IGNORECASE | re.DOTALL)
+    # Hyperlinks
+    s = re.sub(r"<a\s+href=[\"\'](.*?)[\"\']>(.*?)</a>", r"[\2](\1)", s, flags=re.IGNORECASE | re.DOTALL)
+    # Strip any remaining unrecognized HTML tags
+    s = re.sub(r"<[^>]+>", "", s)
+    # Unescape HTML entities (&nbsp;, &amp;, &lt;, &gt;, &quot;, &#39;, etc.)
+    s = html.unescape(s)
+    return s
 
 
 class MAXClient:
@@ -51,6 +77,7 @@ class MAXClient:
         user_id: Optional[int] = None,
         keyboard: Optional[Dict[str, Any]] = None,
         attachments: Optional[List[Dict[str, Any]]] = None,
+        format: Optional[str] = "markdown",
     ) -> Optional[Dict[str, Any]]:
         """Send a message to a MAX chat or user, optionally with inline keyboard or attachments."""
         if not self.is_configured():
@@ -71,21 +98,37 @@ class MAXClient:
         if keyboard:
             all_attachments.append(keyboard)
 
-        payload: Dict[str, Any] = {"text": text}
+        # Ensure text is converted to clean Markdown for MAX Messenger
+        markdown_text = html_to_max_markdown(text) if text else ""
+        payload: Dict[str, Any] = {"text": markdown_text}
+        if format:
+            payload["format"] = format
         if all_attachments:
             payload["attachments"] = all_attachments
 
         url = f"{self.base_url}/messages"
-        try:
-            resp = await client.post(url, params=params, json=payload)
-            resp.raise_for_status()
-            return resp.json()
-        except httpx.HTTPStatusError as exc:
-            logger.error(f"MAX API Error ({exc.response.status_code}) sending message: {exc.response.text}")
-            return None
-        except Exception as exc:
-            logger.error(f"Failed sending message to MAX: {exc}")
-            return None
+        for attempt in range(1, 6):
+            try:
+                resp = await client.post(url, params=params, json=payload)
+                if resp.status_code == 400 and "attachment.not.ready" in resp.text:
+                    if attempt < 5:
+                        logger.info(f"MAX attachment not ready yet, retrying in 1.0s (attempt {attempt}/5)...")
+                        await asyncio.sleep(1.0)
+                        continue
+                resp.raise_for_status()
+                return resp.json()
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 400 and "attachment.not.ready" in exc.response.text:
+                    if attempt < 5:
+                        logger.info(f"MAX attachment not ready yet, retrying in 1.0s (attempt {attempt}/5)...")
+                        await asyncio.sleep(1.0)
+                        continue
+                logger.error(f"MAX API Error ({exc.response.status_code}) sending message: {exc.response.text}")
+                return None
+            except Exception as exc:
+                logger.error(f"Failed sending message to MAX: {exc}")
+                return None
+        return None
 
     async def answer_callback(
         self,
@@ -162,11 +205,19 @@ class MAXClient:
             up_resp = await client.post(upload_url, files=files)
             up_resp.raise_for_status()
 
-            # Some endpoints return the token in the upload response
-            if up_resp.headers.get("content-type", "").startswith("application/json"):
-                up_data = up_resp.json()
-                if "token" in up_data:
-                    token = up_data["token"]
+            # Some endpoints return the token in the upload response, or inside 'photos' map
+            if up_resp.headers.get("content-type", "").startswith("application/json") or up_resp.text.strip().startswith("{"):
+                try:
+                    up_data = up_resp.json()
+                    if "photos" in up_data and isinstance(up_data["photos"], dict):
+                        for p_val in up_data["photos"].values():
+                            if isinstance(p_val, dict) and "token" in p_val:
+                                token = p_val["token"]
+                                break
+                    elif "token" in up_data:
+                        token = up_data["token"]
+                except Exception as parse_exc:
+                    logger.warning(f"Could not parse upload JSON: {parse_exc}")
 
             return token
         except Exception as exc:
@@ -186,10 +237,13 @@ class MAXClient:
         if not token:
             # If upload token isn't supported, send caption text with notification
             return await self.send_message(
-                text=f"{caption}\n\n📎 <i>Файл '{filename}' сгенерирован (размер: {len(file_bytes):,} байт).</i>",
+                text=f"{caption}\n\n📎 *Файл '{filename}' сгенерирован (размер: {len(file_bytes):,} байт).* ",
                 chat_id=chat_id,
                 user_id=user_id,
             )
+
+        # Allow MAX backend a moment to finish indexing the file attachment
+        await asyncio.sleep(1.0)
 
         attachment = {
             "type": "file",

@@ -33,6 +33,7 @@ ENV/
 # Environment & Credentials
 .env
 service_account.json
+data/*.json
 
 # Generated output & caches
 output/

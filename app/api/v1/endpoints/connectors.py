@@ -5,7 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, verify_api_key
+from app.connectors.ozon import OzonConnector, ozon_connector
+from app.connectors.sbermarket import SberMarketConnector, sbermarket_connector
 from app.connectors.wildberries import WildberriesConnector, wb_connector
+from app.connectors.yandex_market import YandexMarketConnector, ym_connector
 
 router = APIRouter()
 
@@ -48,3 +51,129 @@ async def sync_wildberries(
 async def test_wildberries_status() -> Dict[str, Any]:
     """Check connectivity to Wildberries Statistics API with configured WB_API_KEY."""
     return await wb_connector.test_connection()
+
+
+@router.post(
+    "/ozon/sync",
+    summary="Synchronize postings & revenue from Ozon Seller API",
+    dependencies=[Depends(verify_api_key)],
+)
+async def sync_ozon(
+    days: int = Query(7, ge=1, le=90, description="Number of past days to sync"),
+    mock: bool = Query(False, description="Force simulated sandbox data for demo"),
+    client_id: Optional[str] = Query(None, description="Optional override for Ozon Client ID"),
+    api_key: Optional[str] = Query(None, description="Optional override for Ozon API Key"),
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    """Pull postings and financial metrics from Ozon Seller API and ingest into metrics database."""
+    connector = OzonConnector(client_id=client_id, api_key=api_key) if (client_id and api_key) else ozon_connector
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=days)
+
+    res = await connector.fetch_and_ingest(
+        start_date=start_date,
+        end_date=end_date,
+        session=db,
+        force_mock=mock,
+    )
+    if not res.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=res.get("message", "Ozon sync failed."),
+        )
+    return res
+
+
+@router.get(
+    "/ozon/status",
+    summary="Test Ozon Seller API connection",
+    dependencies=[Depends(verify_api_key)],
+)
+async def test_ozon_status() -> Dict[str, Any]:
+    """Check connectivity to Ozon Seller API with configured credentials."""
+    return await ozon_connector.test_connection()
+
+
+@router.post(
+    "/yandex-market/sync",
+    summary="Synchronize orders & revenue from Yandex Market Partner API",
+    dependencies=[Depends(verify_api_key)],
+)
+async def sync_yandex_market(
+    days: int = Query(7, ge=1, le=90, description="Number of past days to sync"),
+    mock: bool = Query(False, description="Force simulated sandbox data for demo"),
+    campaign_id: Optional[str] = Query(None, description="Optional override for YM Campaign ID"),
+    api_key: Optional[str] = Query(None, description="Optional override for YM API Key"),
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    """Pull orders and sales telemetry from Yandex Market Partner API and persist to DB."""
+    connector = YandexMarketConnector(campaign_id=campaign_id, api_key=api_key) if (campaign_id and api_key) else ym_connector
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=days)
+
+    res = await connector.fetch_and_ingest(
+        start_date=start_date,
+        end_date=end_date,
+        session=db,
+        force_mock=mock,
+    )
+    if not res.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=res.get("message", "Yandex Market sync failed."),
+        )
+    return res
+
+
+@router.get(
+    "/yandex-market/status",
+    summary="Test Yandex Market Partner API connection",
+    dependencies=[Depends(verify_api_key)],
+)
+async def test_yandex_market_status() -> Dict[str, Any]:
+    """Check connectivity to Yandex Market Partner API with configured credentials."""
+    return await ym_connector.test_connection()
+
+
+@router.post(
+    "/sbermarket/sync",
+    summary="Synchronize orders & revenue from SberMarket / Kuper API",
+    dependencies=[Depends(verify_api_key)],
+)
+async def sync_sbermarket(
+    days: int = Query(7, ge=1, le=90, description="Number of past days to sync"),
+    mock: bool = Query(False, description="Force simulated sandbox data for demo"),
+    api_token: Optional[str] = Query(None, description="Optional override for SberMarket API token"),
+    merchant_id: Optional[str] = Query(None, description="Optional override for SberMarket Merchant ID"),
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    """Pull orders and grocery/retail sales telemetry from SberMarket (Kuper) API and persist to DB."""
+    connector = SberMarketConnector(api_token=api_token, merchant_id=merchant_id) if (api_token and merchant_id) else sbermarket_connector
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=days)
+
+    res = await connector.fetch_and_ingest(
+        start_date=start_date,
+        end_date=end_date,
+        session=db,
+        force_mock=mock,
+    )
+    if not res.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=res.get("message", "SberMarket sync failed."),
+        )
+    return res
+
+
+@router.get(
+    "/sbermarket/status",
+    summary="Test SberMarket / Kuper API connection",
+    dependencies=[Depends(verify_api_key)],
+)
+async def test_sbermarket_status() -> Dict[str, Any]:
+    """Check connectivity to SberMarket / Kuper API with configured credentials."""
+    return await sbermarket_connector.test_connection()
+
+
+

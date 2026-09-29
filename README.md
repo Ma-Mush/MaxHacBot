@@ -386,6 +386,9 @@ All artifacts (`.pdf`, `.xlsx`, `.png`, and caption) will be generated into `./o
 | Command | Description |
 |---|---|
 | `python cli.py sync-wb [--days 14] [--mock]` | Synchronize sales and returns directly from Wildberries Statistics API / sandbox |
+| `python cli.py sync-ozon [--days 14] [--mock]` | Synchronize postings and revenue directly from Ozon Seller API / sandbox |
+| `python cli.py sync-yandex [--days 14] [--mock]` | Synchronize orders and sales directly from Yandex Market Partner API / sandbox |
+| `python cli.py sync-sbermarket [--days 14] [--mock]` | Synchronize retail orders and GMV directly from SberMarket / Kuper API / sandbox |
 | `python cli.py seed-demo [--days 60]` | Seed historical e-commerce and server metrics |
 | `python cli.py list-reports` | List all registered and discovered plugins |
 | `python cli.py test-report <report_id> [--days 7]` | Generate PDF, Excel, and PNG artifacts into `./output/` |
@@ -397,18 +400,34 @@ All artifacts (`.pdf`, `.xlsx`, `.png`, and caption) will be generated into `./o
 
 ---
 
-## 🛒 Wildberries Marketplace Connector
+## 🛒 Marketplace Connectors (WB, Ozon, Яндекс.Маркет, СберМаркет/Купер)
 
-OmniMetrics Hub includes a production-ready connector for **Wildberries** sellers (`https://statistics-api.wildberries.ru/api/v1/supplier/sales`).
+OmniMetrics Hub features native integrations with all major Russian e-commerce and delivery platforms:
 
-### Key Features
-- **Live Seller Statistics**: Synchronizes real-time sales transactions, customer discounts, refunds, warehouse distribution, and regional delivery metrics.
-- **Zero-Config Sandbox / Mock Fallback**: If `WB_API_KEY` is not set or `--mock` flag is passed, generates realistic e-commerce transactions for live hackathon demonstrations.
-- **Intelligent Ingestion & Deduplication**: Maps raw WB payloads into `revenue`, `orders_count`, and `refunds` metrics tagged with region, warehouse, category, and `wb_srid` for idempotency.
-- **MAX Messenger Trigger**: Send `/wb` or tap **🟣 Синхронизировать Wildberries** to trigger instant ingestion and receive an executive briefing with PDF and Excel.
-- **REST API Endpoints**:
-  - `POST /api/v1/connectors/wildberries/sync` — trigger background or synchronous synchronization.
-  - `GET /api/v1/connectors/wildberries/status` — verify API key connection and connector readiness.
+### 1. Wildberries Statistics API
+- **Endpoint**: `https://statistics-api.wildberries.ru/api/v1/supplier/sales`
+- **CLI**: `python cli.py sync-wb [--days 14] [--mock]`
+- **MAX Bot**: `/wb` or button `🟣 Синхронизировать Wildberries`
+- **REST**: `POST /api/v1/connectors/wildberries/sync`, `GET /api/v1/connectors/wildberries/status`
+
+### 2. Ozon Seller API
+- **Endpoint**: `https://api-seller.ozon.ru/v3/posting/fbs/list`
+- **CLI**: `python cli.py sync-ozon [--days 14] [--mock]`
+- **MAX Bot**: `/ozon` or button `🔵 Синхронизировать Ozon`
+- **REST**: `POST /api/v1/connectors/ozon/sync`, `GET /api/v1/connectors/ozon/status`
+
+### 3. Yandex Market Partner API
+- **Endpoint**: `https://api.partner.market.yandex.ru/campaigns/{campaign_id}/orders`
+- **CLI**: `python cli.py sync-yandex [--days 14] [--mock]`
+- **MAX Bot**: `/yandex` or button `🟡 Синхронизировать Яндекс.Маркет`
+- **REST**: `POST /api/v1/connectors/yandex-market/sync`, `GET /api/v1/connectors/yandex-market/status`
+
+### 4. SberMarket (Kuper) Merchant API
+- **Endpoint**: `https://api.sbermarket.ru/v1/merchant/orders`
+- **CLI**: `python cli.py sync-sbermarket [--days 14] [--mock]`
+- **MAX Bot**: `/sbermarket` (или `/kuper`) or button `🟢 Синхронизировать СберМаркет (Купер)`
+- **REST**: `POST /api/v1/connectors/sbermarket/sync`, `GET /api/v1/connectors/sbermarket/status`
+- **Fail-Safe Sandbox**: Fully functional mock dataset generation for instant live jury testing across all channels.
 
 ---
 

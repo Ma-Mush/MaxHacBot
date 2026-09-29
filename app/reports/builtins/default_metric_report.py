@@ -21,8 +21,8 @@ class DefaultMetricReport(BaseReport):
     """General-purpose report analyzing all metrics within the designated window."""
 
     report_id = "default_metric_report"
-    display_name = "🌐 Universal Metrics Overview"
-    description = "Holistic executive breakdown and trends for all active numerical metrics"
+    display_name = "Обзор ключевых метрик"
+    description = "Комплексный анализ и динамика всех операционных и финансовых показателей бизнеса"
 
     async def fetch_data(
         self,
@@ -240,11 +240,14 @@ class DefaultMetricReport(BaseReport):
             "rows": table_rows,
         }]
 
+        from app.services.ai_analyst import ai_analyst
+        ai_box_title = "⚡ Сводка встроенного анализатора" if not ai_analyst.is_ai_enabled() else "🧠 Аналитический инсайт нейросети"
         context = {
             "report_title": self.display_name,
             "date_range_label": data.get("date_range_label", "Selected Window"),
             "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
             "ai_summary": ai_summary,
+            "ai_summary_title": ai_box_title,
             "kpis": kpi_cards,
             "charts": chart_containers,
             "tables": tables,
@@ -335,13 +338,13 @@ class DefaultMetricReport(BaseReport):
         ai_summary: Optional[str] = None,
     ) -> str:
         metrics = data.get("metrics", {})
-        label = data.get("date_range_label", "Selected Period")
+        label = data.get("date_range_label", "Выбранный период")
 
         lines = [
             f"📊 <b>{self.display_name}</b>",
-            f"🗓 <i>Period: {label}</i>",
+            f"🗓 <i>Период: {label}</i>",
             "",
-            "<b>Key Metrics:</b>",
+            "<b>Ключевые показатели:</b>",
         ]
 
         for m in list(metrics.values())[:5]:
@@ -353,7 +356,8 @@ class DefaultMetricReport(BaseReport):
 
         if ai_summary:
             lines.append("")
-            lines.append("🧠 <b>Executive Briefing:</b>")
+            from app.services.ai_analyst import ai_analyst
+            lines.append(ai_analyst.get_summary_title())
             lines.append(ai_summary)
 
         return "\n".join(lines)

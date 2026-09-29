@@ -179,6 +179,114 @@ def sync_wb_cmd(days: int, mock: bool, api_key: Optional[str]):
     run_async(_sync())
 
 
+@cli.command("sync-ozon")
+@click.option("--days", default=14, help="Number of past days of postings to sync (default: 14).")
+@click.option("--mock", is_flag=True, default=False, help="Force simulated sandbox data for demo.")
+@click.option("--client-id", default=None, help="Ozon Seller Client ID.")
+@click.option("--api-key", default=None, help="Ozon Seller API Key.")
+def sync_ozon_cmd(days: int, mock: bool, client_id: Optional[str], api_key: Optional[str]):
+    """Synchronize postings and financial metrics directly from Ozon Seller API."""
+    async def _sync():
+        await init_db()
+        from app.connectors.ozon import OzonConnector
+        connector = OzonConnector(client_id=client_id, api_key=api_key)
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=days)
+
+        click.secho(f"\n🛒 Connecting to Ozon ({'Sandbox/Demo' if (mock or not connector.is_configured()) else 'Live API'})...", fg="blue", bold=True)
+        res = await connector.fetch_and_ingest(start_date=start_date, end_date=end_date, force_mock=mock)
+        if not res.get("success"):
+            click.secho(f"❌ Synchronization failed: {res.get('message')}", fg="red")
+            return
+
+        click.secho(f"✅ Successfully synchronized {res['postings_count']} Ozon postings ({res['metrics_created']} metric records)!", fg="green", bold=True)
+        click.echo(f"   📅 Time Window:     {res['date_from']} -> {res['date_to']}")
+        click.echo(f"   💰 Total Revenue:    {res['total_revenue']:,.2f} RUB")
+        click.echo(f"   📦 Orders Count:     {res['total_orders']}")
+        click.echo(f"   🔄 Returns/Cancels:  {res['total_refunds']:,.2f} RUB")
+        if res.get("top_clusters"):
+            click.echo(f"   📍 Top Clusters:     {', '.join(f'{k} ({v})' for k, v in list(res['top_clusters'].items())[:3])}")
+        if res.get("top_warehouses"):
+            click.echo(f"   🏭 Top Warehouses:    {', '.join(f'{k} ({v})' for k, v in list(res['top_warehouses'].items())[:3])}")
+        click.secho("\n✨ Telemetry updated! Generate executive briefing with 'python cli.py test-report ecommerce_summary'.\n", fg="cyan")
+        await close_db()
+
+    run_async(_sync())
+
+
+@cli.command("sync-yandex")
+@click.option("--days", default=14, help="Number of past days of orders to sync (default: 14).")
+@click.option("--mock", is_flag=True, default=False, help="Force simulated sandbox data for demo.")
+@click.option("--campaign-id", default=None, help="Yandex Market Campaign ID.")
+@click.option("--api-key", default=None, help="Yandex Market Partner API Key.")
+def sync_yandex_cmd(days: int, mock: bool, campaign_id: Optional[str], api_key: Optional[str]):
+    """Synchronize orders and sales telemetry directly from Yandex Market Partner API."""
+    async def _sync():
+        await init_db()
+        from app.connectors.yandex_market import YandexMarketConnector
+        connector = YandexMarketConnector(campaign_id=campaign_id, api_key=api_key)
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=days)
+
+        click.secho(f"\n🛒 Connecting to Yandex Market ({'Sandbox/Demo' if (mock or not connector.is_configured()) else 'Live API'})...", fg="yellow", bold=True)
+        res = await connector.fetch_and_ingest(start_date=start_date, end_date=end_date, force_mock=mock)
+        if not res.get("success"):
+            click.secho(f"❌ Synchronization failed: {res.get('message')}", fg="red")
+            return
+
+        click.secho(f"✅ Successfully synchronized {res['orders_count']} Yandex Market orders ({res['metrics_created']} metric records)!", fg="green", bold=True)
+        click.echo(f"   📅 Time Window:     {res['date_from']} -> {res['date_to']}")
+        click.echo(f"   💰 Total Revenue:    {res['total_revenue']:,.2f} RUB")
+        click.echo(f"   📦 Orders Count:     {res['total_orders']}")
+        click.echo(f"   🔄 Returns/Cancels:  {res['total_refunds']:,.2f} RUB")
+        if res.get("top_regions"):
+            click.echo(f"   📍 Top Regions:      {', '.join(f'{k} ({v})' for k, v in list(res['top_regions'].items())[:3])}")
+        if res.get("top_warehouses"):
+            click.echo(f"   🏭 Top Warehouses:    {', '.join(f'{k} ({v})' for k, v in list(res['top_warehouses'].items())[:3])}")
+        click.secho("\n✨ Telemetry updated! Generate executive briefing with 'python cli.py test-report ecommerce_summary'.\n", fg="cyan")
+        await close_db()
+
+    run_async(_sync())
+
+
+@cli.command("sync-sbermarket")
+@click.option("--days", default=14, help="Number of past days of orders to sync (default: 14).")
+@click.option("--mock", is_flag=True, default=False, help="Force simulated sandbox data for demo.")
+@click.option("--api-token", default=None, help="SberMarket / Kuper API Token.")
+@click.option("--merchant-id", default=None, help="SberMarket / Kuper Merchant ID.")
+def sync_sbermarket_cmd(days: int, mock: bool, api_token: Optional[str], merchant_id: Optional[str]):
+    """Synchronize orders and retail GMV directly from SberMarket / Kuper Merchant API."""
+    async def _sync():
+        await init_db()
+        from app.connectors.sbermarket import SberMarketConnector
+        connector = SberMarketConnector(api_token=api_token, merchant_id=merchant_id)
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=days)
+
+        click.secho(f"\n🛒 Connecting to SberMarket/Купер ({'Sandbox/Demo' if (mock or not connector.is_configured()) else 'Live API'})...", fg="green", bold=True)
+        res = await connector.fetch_and_ingest(start_date=start_date, end_date=end_date, force_mock=mock)
+        if not res.get("success"):
+            click.secho(f"❌ Synchronization failed: {res.get('message')}", fg="red")
+            return
+
+        click.secho(f"✅ Successfully synchronized {res['orders_count']} SberMarket/Купер orders ({res['metrics_created']} metric records)!", fg="green", bold=True)
+        click.echo(f"   📅 Time Window:     {res['date_from']} -> {res['date_to']}")
+        click.echo(f"   💰 Total Revenue:    {res['total_revenue']:,.2f} RUB")
+        click.echo(f"   📦 Orders Count:     {res['total_orders']}")
+        click.echo(f"   🔄 Returns/Cancels:  {res['total_refunds']:,.2f} RUB")
+        if res.get("top_cities"):
+            click.echo(f"   📍 Top Cities:       {', '.join(f'{k} ({v})' for k, v in list(res['top_cities'].items())[:3])}")
+        if res.get("top_stores"):
+            click.echo(f"   🏬 Top Stores:       {', '.join(f'{k} ({v})' for k, v in list(res['top_stores'].items())[:3])}")
+        click.secho("\n✨ Telemetry updated! Generate executive briefing with 'python cli.py test-report ecommerce_summary'.\n", fg="cyan")
+        await close_db()
+
+    run_async(_sync())
+
+
+
+
+
 @cli.command("list-reports")
 def list_reports():
     """List all registered report plugins and their metadata."""
@@ -407,6 +515,66 @@ class {class_name}(BaseReport):
     click.secho(f"🎉 Created report plugin scaffold: {target_path}", fg="green", bold=True)
     click.echo(f"Report ID: {report_id}")
     click.echo("This report will be auto-discovered by OmniMetrics Hub!")
+
+
+@cli.command("ai-status")
+def ai_status_cmd():
+    """Show current AI Analyst configuration, active mode, and provider status."""
+    from app.services.ai_analyst import ai_analyst, PROVIDER_NAMES
+    st = ai_analyst.get_status()
+    click.secho("\n🧠 OmniMetrics AI Analyst Status:", fg="cyan", bold=True)
+    click.echo(f"   Режим работы:      {st['mode_title']}")
+    click.echo(f"   Текущий режим:     {st['mode']} (heuristic / api / local)")
+    click.echo(f"   Облачный провайдер: {PROVIDER_NAMES.get(st['api_provider'], st['api_provider'])} [модель: {st['api_model']}]")
+    click.echo(f"   API-ключ:          {st['api_key_masked']}")
+    click.echo(f"   Локальная Ollama:  {st['ollama_model']} @ {st['ollama_url']}")
+
+    async def _check():
+        ollama_info = await ai_analyst.check_ollama()
+        if ollama_info["online"]:
+            click.secho(f"   Ollama Daemon:     ✅ Онлайн ({ollama_info['message']})\n", fg="green")
+        else:
+            click.secho(f"   Ollama Daemon:     ⚠️ Офлайн ({ollama_info['message']})\n", fg="yellow")
+
+    run_async(_check())
+
+
+@cli.command("set-ai")
+@click.option("--mode", type=click.Choice(["heuristic", "api", "local"]), help="Active engine mode.")
+@click.option("--provider", type=click.Choice(["openai", "deepseek", "gigachat", "groq", "anthropic"]), help="Cloud LLM provider.")
+@click.option("--api-key", default=None, help="API key for cloud provider.")
+@click.option("--ollama-model", default=None, help="Model name for local Ollama.")
+@click.option("--ollama-url", default=None, help="URL for local Ollama daemon.")
+def set_ai_cmd(mode: Optional[str], provider: Optional[str], api_key: Optional[str], ollama_model: Optional[str], ollama_url: Optional[str]):
+    """Configure AI engine mode, cloud API credentials, or local Ollama settings."""
+    from app.services.ai_analyst import ai_analyst
+    if provider:
+        ai_analyst.set_api_provider(provider)
+        click.secho(f"✅ Cloud provider set to: {provider}", fg="green")
+    if api_key and provider:
+        ai_analyst.set_api_key(provider, api_key)
+        click.secho(f"🔑 API key saved for: {provider}", fg="green")
+    elif api_key:
+        ai_analyst.set_api_key(ai_analyst.api_provider, api_key)
+        click.secho(f"🔑 API key saved for current provider: {ai_analyst.api_provider}", fg="green")
+    if ollama_model or ollama_url:
+        ai_analyst.set_local_model(ollama_model or ai_analyst.ollama_model, ollama_url or ai_analyst.ollama_base_url)
+        click.secho(f"💻 Ollama model set to: {ai_analyst.ollama_model}", fg="green")
+    if mode:
+        ai_analyst.set_mode(mode)
+        click.secho(f"🚀 AI mode switched to: {mode}", fg="green", bold=True)
+
+    st = ai_analyst.get_status()
+    click.echo(f"Active Mode: {st['mode_title']}\n")
+
+
+@cli.command("disable-ai")
+def disable_ai_cmd():
+    """Turn off neural network analytics and revert to built-in algorithmic analyzer."""
+    from app.services.ai_analyst import ai_analyst
+    ai_analyst.disable_ai()
+    click.secho("\n✅ Нейроаналитика успешно отключена!", fg="green", bold=True)
+    click.echo("⚡ Активен встроенный алгоритмический анализатор (математический расчет без нейросетей).\n")
 
 
 @cli.command("run-api")
