@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     ALLOWED_MAX_USERS: Union[List[int], str] = []
     MAX_DEFAULT_CHAT_ID: Optional[int] = None
 
+    # Marketplace Connectors (Wildberries, etc.)
+    WB_API_KEY: Optional[str] = None
+
     # AI Executive Analyst
     # Options: "openai", "anthropic", "ollama", "heuristic", "none"
     AI_PROVIDER: str = "heuristic"

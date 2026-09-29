@@ -385,6 +385,7 @@ All artifacts (`.pdf`, `.xlsx`, `.png`, and caption) will be generated into `./o
 
 | Command | Description |
 |---|---|
+| `python cli.py sync-wb [--days 14] [--mock]` | Synchronize sales and returns directly from Wildberries Statistics API / sandbox |
 | `python cli.py seed-demo [--days 60]` | Seed historical e-commerce and server metrics |
 | `python cli.py list-reports` | List all registered and discovered plugins |
 | `python cli.py test-report <report_id> [--days 7]` | Generate PDF, Excel, and PNG artifacts into `./output/` |
@@ -393,6 +394,21 @@ All artifacts (`.pdf`, `.xlsx`, `.png`, and caption) will be generated into `./o
 | `python cli.py run-max-bot` | Launch MAX Messenger Bot polling runner |
 | `python cli.py run-bot` | Launch Telegram bot long-polling with scheduler |
 | `python cli.py run-all` | Run API, MAX Bot, and Telegram bot concurrently |
+
+---
+
+## 🛒 Wildberries Marketplace Connector
+
+OmniMetrics Hub includes a production-ready connector for **Wildberries** sellers (`https://statistics-api.wildberries.ru/api/v1/supplier/sales`).
+
+### Key Features
+- **Live Seller Statistics**: Synchronizes real-time sales transactions, customer discounts, refunds, warehouse distribution, and regional delivery metrics.
+- **Zero-Config Sandbox / Mock Fallback**: If `WB_API_KEY` is not set or `--mock` flag is passed, generates realistic e-commerce transactions for live hackathon demonstrations.
+- **Intelligent Ingestion & Deduplication**: Maps raw WB payloads into `revenue`, `orders_count`, and `refunds` metrics tagged with region, warehouse, category, and `wb_srid` for idempotency.
+- **MAX Messenger Trigger**: Send `/wb` or tap **🟣 Синхронизировать Wildberries** to trigger instant ingestion and receive an executive briefing with PDF and Excel.
+- **REST API Endpoints**:
+  - `POST /api/v1/connectors/wildberries/sync` — trigger background or synchronous synchronization.
+  - `GET /api/v1/connectors/wildberries/status` — verify API key connection and connector readiness.
 
 ---
 

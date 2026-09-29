@@ -13,6 +13,7 @@ from app.max_bot.keyboards import (
     get_max_refresh_keyboard,
     get_max_reports_keyboard,
 )
+from app.connectors.wildberries import wb_connector
 from app.reports.engine import report_engine
 from app.reports.registry import report_registry
 
@@ -96,8 +97,9 @@ class MAXDispatcher:
             help_text = (
                 "💡 <b>Справка по OmniMetrics в МАКС:</b>\n\n"
                 "• <b>/report</b> — открыть каталог доступных отчетов\n"
-                "• <b>/start</b> — перезапустить интерактивное меню\n"
-                "• <b>/status</b> — проверка статуса сбора метрик и подключений\n\n"
+                "• <b>/wb</b> — синхронизация статистики продаж с Wildberries API\n"
+                "• <b>/status</b> — проверка статуса сбора метрик и подключений\n"
+                "• <b>/start</b> — перезапустить интерактивное меню\n\n"
                 "📦 <b>Доступные форматы:</b>\n"
                 "— ⚡ Экспресс-карточка: мгновенный график и 4-пунктовая AI-выжимка\n"
                 "— 📄 PDF-отчет: представительский многостраничный документ для руководства\n"
@@ -107,11 +109,13 @@ class MAXDispatcher:
             await max_client.send_message(text=help_text, chat_id=chat_id, user_id=user_id)
         elif cmd in ("/status", "статус"):
             reports_count = len(report_registry.list_reports())
+            wb_state = "Подключен (API)" if wb_connector.is_configured() else "Песочница / Mock"
             status_text = (
                 "🟢 <b>Система OmniMetrics Hub активна</b>\n\n"
                 f"• Платформа: <b>Мессенджер МАКС</b>\n"
                 f"• Загружено плагинов отчетов: <b>{reports_count}</b>\n"
                 f"• AI-аналитик: <b>{settings.AI_PROVIDER.upper()}</b>\n"
+                f"• Коннектор Wildberries: <b>{wb_state}</b>\n"
                 f"• База данных: <b>Подключена</b>\n"
                 f"• Шедулер регламентных рассылок: <b>Активен</b>"
             )
@@ -121,6 +125,8 @@ class MAXDispatcher:
                 user_id=user_id,
                 keyboard=get_max_refresh_keyboard(),
             )
+        elif cmd in ("/wb", "wb", "вайлдберриз", "wildberries"):
+            await self._handle_wb_sync(chat_id=chat_id, user_id=user_id)
         else:
             # Natural language conversational fallback
             ai_reply = (
@@ -166,6 +172,11 @@ class MAXDispatcher:
                 user_id=user_id,
                 keyboard=get_max_reports_keyboard(),
             )
+            return
+
+        # 1.1 Wildberries sync callback
+        if payload == "rep:sync:wb":
+            await self._handle_wb_sync(chat_id=chat_id, user_id=user_id)
             return
 
         # 2. Selected a report -> show date range picker
@@ -238,6 +249,64 @@ class MAXDispatcher:
                 format_type=format_type,
                 chat_id=chat_id,
                 user_id=user_id,
+            )
+
+    async def _handle_wb_sync(self, chat_id: Optional[int], user_id: Optional[int]) -> None:
+        """Fetch statistics from Wildberries and deliver executive briefing."""
+        await max_client.send_action(chat_id=chat_id, user_id=user_id, action="typing")
+        await max_client.send_message(
+            text="🔄 <b>Запуск синхронизации с Wildberries...</b>\n"
+                 "<i>Запрашиваю статистику продаж и обновляю метрики в базе...</i>",
+            chat_id=chat_id,
+            user_id=user_id,
+        )
+
+        try:
+            from datetime import timedelta, timezone
+            end_d = datetime.now(timezone.utc)
+            start_d = end_d - timedelta(days=14)
+
+            async with async_session_maker() as session:
+                res = await wb_connector.fetch_and_ingest(
+                    start_date=start_d,
+                    end_date=end_d,
+                    session=session,
+                )
+
+            mode_str = "Боевой API WB" if res.get("mode") == "live_api" else "Песочница / Mock-генератор"
+            top_reg = list(res.get("top_regions", {}).keys())[0] if res.get("top_regions") else "—"
+            top_wh = list(res.get("top_warehouses", {}).keys())[0] if res.get("top_warehouses") else "—"
+            aov = res["total_revenue"] / res["total_orders"] if res.get("total_orders") else 0.0
+
+            summary_msg = (
+                "🟣 <b>Синхронизация с Wildberries завершена!</b>\n\n"
+                f"• Режим источника: <b>{mode_str}</b>\n"
+                f"• Заказов получено: <b>{res.get('total_orders', 0)}</b>\n"
+                f"• Выручка: <b>{res.get('total_revenue', 0.0):,.2f} ₽</b>\n"
+                f"• Возвраты: <b>{res.get('total_refunds', 0.0):,.2f} ₽</b>\n"
+                f"• Средний чек (AOV): <b>{aov:,.2f} ₽</b>\n"
+                f"• Топ регион: <b>{top_reg}</b>\n"
+                f"• Ключевой склад: <b>{top_wh}</b>\n\n"
+                "📄 <i>Генерирую управленческий отчет, графики и Excel...</i>"
+            )
+            await max_client.send_message(text=summary_msg, chat_id=chat_id, user_id=user_id)
+
+            # Auto-generate full executive briefing for the updated data
+            rep_id = "ecommerce_summary" if report_registry.get("ecommerce_summary") else "revenue_executive"
+            await self._execute_and_send_report(
+                report_id=rep_id,
+                date_range="last_30_days",
+                format_type="all",
+                chat_id=chat_id,
+                user_id=user_id,
+            )
+        except Exception as exc:
+            logger.error(f"Error during WB sync in MAX: {exc}", exc_info=True)
+            await max_client.send_message(
+                text=f"❌ <b>Ошибка при синхронизации Wildberries:</b>\n<code>{str(exc)}</code>",
+                chat_id=chat_id,
+                user_id=user_id,
+                keyboard=get_max_refresh_keyboard(),
             )
 
     async def _execute_and_send_report(
