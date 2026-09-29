@@ -304,7 +304,7 @@
   <!-- AI Executive Summary Callout -->
   {% if ai_summary %}
   <div class="ai-box">
-    <div class="ai-box-title">🧠 Executive Intelligence Briefing</div>
+    <div class="ai-box-title">{{ ai_summary_title or "🧠 Executive Intelligence Briefing" }}</div>
     <div class="ai-box-content">
       {{ ai_summary | replace('\n', '<br>') | safe }}
     </div>

@@ -78,3 +78,19 @@ def test_ai_analyst_status():
     assert "Встроенный анализатор" in st["mode_title"]
     assert "ollama_url" in st
     assert "api_provider" in st
+    assert st["is_ai_enabled"] is False
+
+
+def test_ai_analyst_disable_ai():
+    """Verify disable_ai switches mode back to heuristic and updates titles."""
+    service = AIAnalystService()
+    service.set_mode("api")
+    assert service.is_ai_enabled() is True
+    assert "нейросети" in service.get_summary_title()
+
+    service.disable_ai()
+    assert service.is_ai_enabled() is False
+    assert service.mode == "heuristic"
+    assert "Встроенный анализатор" in service.get_status()["mode_title"]
+    assert "встроенного анализатора" in service.get_summary_title()
+

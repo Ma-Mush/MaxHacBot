@@ -165,20 +165,41 @@ class AIAnalystService:
             "message": "Сервис Ollama недоступен (проверьте 'ollama serve')",
         }
 
+    def disable_ai(self) -> None:
+        """Disable neural analytics and switch to the built-in algorithmic analyzer."""
+        self.set_mode("heuristic")
+
+    def is_ai_enabled(self) -> bool:
+        """Check whether neural network AI mode is currently enabled."""
+        return self.mode in ("api", "local")
+
+    def get_summary_title(self) -> str:
+        """Return title for report caption / callout based on active engine."""
+        if self.mode == "heuristic":
+            return "⚡ <b>Сводка встроенного анализатора:</b>"
+        elif self.mode == "api":
+            return f"🧠 <b>Аналитический инсайт нейросети ({PROVIDER_NAMES.get(self.api_provider, self.api_provider)}):</b>"
+        elif self.mode == "local":
+            return f"💻 <b>Аналитический инсайт нейросети (Ollama: {self.ollama_model}):</b>"
+        return "📊 <b>Аналитическая сводка:</b>"
+
     def get_status(self) -> Dict[str, Any]:
         """Return comprehensive status for UI/dashboard."""
         cur_key = self.api_keys.get(self.api_provider, "")
         masked_key = f"{cur_key[:4]}...{cur_key[-4:]}" if len(cur_key) >= 10 else ("Указан" if cur_key else "Не настроен")
 
         mode_titles = {
-            "heuristic": "⚡ Встроенный анализатор (Правила)",
+            "heuristic": "⚡ Встроенный анализатор (Без нейросети)",
             "api": f"🌐 Нейросеть (API: {PROVIDER_NAMES.get(self.api_provider, self.api_provider)})",
             "local": f"💻 Локальная нейросеть (Ollama: {self.ollama_model})",
         }
+        is_ai_on = self.mode in ("api", "local")
 
         return {
             "mode": self.mode,
             "mode_title": mode_titles.get(self.mode, self.mode),
+            "is_ai_enabled": is_ai_on,
+            "ai_status_badge": "🟣 Нейросеть включена" if is_ai_on else "🟢 Нейросеть ОТКЛЮЧЕНА (Встроенный анализатор)",
             "api_provider": self.api_provider,
             "api_provider_name": PROVIDER_NAMES.get(self.api_provider, self.api_provider),
             "api_model": self.api_model,

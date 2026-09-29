@@ -114,17 +114,41 @@ def get_max_refresh_keyboard() -> Dict[str, Any]:
 
 
 def get_max_ai_panel_keyboard(current_mode: str, current_provider: str) -> Dict[str, Any]:
-    """Build keyboard for AI & Analytics Control Panel."""
-    h_mark = " (Активен)" if current_mode == "heuristic" else ""
-    api_mark = " (Активен)" if current_mode == "api" else ""
-    loc_mark = " (Активен)" if current_mode == "local" else ""
+    """Build keyboard for AI & Analytics Control Panel with explicit toggle to disable neural AI."""
+    rows: List[List[Dict[str, Any]]] = []
 
-    rows: List[List[Dict[str, Any]]] = [
-        [create_callback_button(f"⚡ Встроенный анализатор{h_mark}", "ai:set:heuristic")],
-        [create_callback_button(f"🌐 Нейросеть (API-ключ){api_mark}", "ai:menu:api")],
-        [create_callback_button(f"💻 Локальная нейросеть (Ollama){loc_mark}", "ai:menu:local")],
-        [create_callback_button("⬅️ Назад к меню отчетов", "rep:back:reports")],
-    ]
+    if current_mode == "heuristic":
+        rows.append([
+            create_callback_button("✅ ⚡ Встроенный анализатор (Нейросеть выключена)", "ai:set:heuristic"),
+        ])
+        rows.append([
+            create_callback_button("🌐 Включить нейросеть через API", "ai:menu:api"),
+        ])
+        rows.append([
+            create_callback_button("💻 Включить локальную нейросеть (Ollama)", "ai:menu:local"),
+        ])
+    else:
+        rows.append([
+            create_callback_button("🛑 Отключить нейроаналитику (Встроенный анализатор)", "ai:set:heuristic"),
+        ])
+        if current_mode == "api":
+            rows.append([
+                create_callback_button("⚙️ Настроить облачный API (Активен)", "ai:menu:api"),
+            ])
+            rows.append([
+                create_callback_button("💻 Переключить на локальную Ollama", "ai:menu:local"),
+            ])
+        else:  # local
+            rows.append([
+                create_callback_button("⚙️ Настроить локальную Ollama (Активна)", "ai:menu:local"),
+            ])
+            rows.append([
+                create_callback_button("🌐 Переключить на облачный API", "ai:menu:api"),
+            ])
+
+    rows.append([
+        create_callback_button("⬅️ Назад к меню отчетов", "rep:back:reports"),
+    ])
     return build_keyboard_attachment(rows)
 
 
@@ -141,6 +165,7 @@ def get_max_ai_api_keyboard(active_provider: str, has_key: bool) -> Dict[str, An
         [p_btn("🟠 GigaChat (Сбер)", "gigachat"), p_btn("⚡ Groq (Llama 3.3)", "groq")],
         [p_btn("🟣 Anthropic (Claude)", "anthropic")],
         [create_callback_button(key_action_text, "ai:action:input_key")],
+        [create_callback_button("🛑 Отключить нейросеть (Встроенный)", "ai:set:heuristic")],
         [create_callback_button("⬅️ Назад в панель AI", "rep:menu:ai")],
     ]
     return build_keyboard_attachment(rows)
@@ -153,6 +178,7 @@ def get_max_ai_local_keyboard(ollama_online: bool, active_model: str) -> Dict[st
         [create_callback_button(f"✅ Активировать локальную Ollama ({active_model})", "ai:set:local:activate")],
         [create_callback_button(f"🔄 Проверить статус {status_icon}", "ai:action:check_ollama")],
         [create_callback_button("✏️ Сменить модель Ollama", "ai:action:input_ollama_model")],
+        [create_callback_button("🛑 Отключить нейросеть (Встроенный)", "ai:set:heuristic")],
         [create_callback_button("⬅️ Назад в панель AI", "rep:menu:ai")],
     ]
     return build_keyboard_attachment(rows)

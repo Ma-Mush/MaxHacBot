@@ -240,11 +240,14 @@ class DefaultMetricReport(BaseReport):
             "rows": table_rows,
         }]
 
+        from app.services.ai_analyst import ai_analyst
+        ai_box_title = "⚡ Сводка встроенного анализатора" if not ai_analyst.is_ai_enabled() else "🧠 Аналитический инсайт нейросети"
         context = {
             "report_title": self.display_name,
             "date_range_label": data.get("date_range_label", "Selected Window"),
             "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
             "ai_summary": ai_summary,
+            "ai_summary_title": ai_box_title,
             "kpis": kpi_cards,
             "charts": chart_containers,
             "tables": tables,
@@ -353,7 +356,8 @@ class DefaultMetricReport(BaseReport):
 
         if ai_summary:
             lines.append("")
-            lines.append("🧠 <b>Аналитический инсайт AI:</b>")
+            from app.services.ai_analyst import ai_analyst
+            lines.append(ai_analyst.get_summary_title())
             lines.append(ai_summary)
 
         return "\n".join(lines)

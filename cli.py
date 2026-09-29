@@ -568,6 +568,15 @@ def set_ai_cmd(mode: Optional[str], provider: Optional[str], api_key: Optional[s
     click.echo(f"Active Mode: {st['mode_title']}\n")
 
 
+@cli.command("disable-ai")
+def disable_ai_cmd():
+    """Turn off neural network analytics and revert to built-in algorithmic analyzer."""
+    from app.services.ai_analyst import ai_analyst
+    ai_analyst.disable_ai()
+    click.secho("\n✅ Нейроаналитика успешно отключена!", fg="green", bold=True)
+    click.echo("⚡ Активен встроенный алгоритмический анализатор (математический расчет без нейросетей).\n")
+
+
 @cli.command("run-api")
 @click.option("--host", default="0.0.0.0", help="Host address to bind to.")
 @click.option("--port", default=8000, help="Port to listen on.")

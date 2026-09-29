@@ -275,10 +275,13 @@ class MAXDispatcher:
             return
 
         if payload == "ai:set:heuristic":
-            ai_analyst.set_mode("heuristic")
+            ai_analyst.disable_ai()
             await max_client.send_message(
-                text="⚡ <b>Режим переключен: Встроенный анализатор (Правила)</b>\n\n"
-                     "Аналитика формируется мгновенно на основе статистических алгоритмов без обращения к внешним нейросетям.",
+                text="✅ <b>Нейроаналитика отключена!</b>\n\n"
+                     "⚡ Активирован <b>Встроенный алгоритмический анализатор</b>.\n"
+                     "• Результаты и выводы отчетов теперь рассчитываются моментально по математическим формулам и дельтам метрик.\n"
+                     "• Запросы к внешним нейросетям полностью отключены (0 сек задержки).\n"
+                     "• При необходимости вы можете снова включить нейросеть в любой момент.",
                 chat_id=chat_id,
                 user_id=user_id,
                 keyboard=get_max_ai_panel_keyboard("heuristic", ai_analyst.api_provider),
@@ -847,17 +850,30 @@ class MAXDispatcher:
     async def _render_ai_panel(self, chat_id: Optional[int], user_id: Optional[int]) -> None:
         """Render AI & Analytics engine control panel."""
         st = ai_analyst.get_status()
-        active_model = st['api_model'] if st['mode'] == 'api' else (st['ollama_model'] if st['mode'] == 'local' else 'Встроенные правила')
+        active_model = st['api_model'] if st['mode'] == 'api' else (st['ollama_model'] if st['mode'] == 'local' else 'Математические правила')
+
+        if st["mode"] == "heuristic":
+            status_badge = "🟢 <b>Нейроаналитика ОТКЛЮЧЕНА</b>"
+            details = (
+                "• Активный движок: <b>⚡ Встроенный алгоритмический анализатор</b>\n"
+                "• Принцип: прямой математический расчет темпов роста, дельт и трендов\n"
+                "• Запросы к нейросетям: <b>отключены (0 сек задержки, полная автономность)</b>\n\n"
+                "<i>Все отчеты формируются строго встроенным анализатором без участия нейросетей. При желании вы можете включить облачную или локальную нейросеть кнопками ниже.</i>"
+            )
+        else:
+            status_badge = "🟣 <b>Нейроаналитика ВКЛЮЧЕНА</b>"
+            details = (
+                f"• Активный режим: <b>{st['mode_title']}</b>\n"
+                f"• Провайдер: <b>{st['api_provider_name']}</b>\n"
+                f"• Модель: <code>{active_model}</code>\n"
+                f"• API-ключ: <code>{st['api_key_masked']}</code>\n\n"
+                "<i>Вы можете в любой момент отключить нейроаналитику кнопкой «🛑 Отключить нейроаналитику» ниже.</i>"
+            )
+
         text = (
-            "🧠 <b>Панель управления AI и аналитикой данных</b>\n\n"
-            "Здесь вы можете выбрать, какой движок анализирует метрики вашего бизнеса "
-            "и формулирует выводы для управленческих отчетов:\n\n"
-            f"⚙️ <b>Текущий активный режим:</b>\n"
-            f"• <b>{st['mode_title']}</b>\n"
-            f"• Провайдер: <b>{st['api_provider_name']}</b>\n"
-            f"• Модель: <code>{active_model}</code>\n"
-            f"• API-ключ: <code>{st['api_key_masked']}</code>\n\n"
-            "Выберите желаемый режим работы ниже:"
+            "🧠 <b>Панель управления аналитикой и нейросетями</b>\n\n"
+            f"⚙️ <b>Статус:</b> {status_badge}\n\n"
+            f"{details}"
         )
         await max_client.send_message(
             text=text,
