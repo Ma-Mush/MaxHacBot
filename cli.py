@@ -213,6 +213,42 @@ def sync_ozon_cmd(days: int, mock: bool, client_id: Optional[str], api_key: Opti
     run_async(_sync())
 
 
+@cli.command("sync-yandex")
+@click.option("--days", default=14, help="Number of past days of orders to sync (default: 14).")
+@click.option("--mock", is_flag=True, default=False, help="Force simulated sandbox data for demo.")
+@click.option("--campaign-id", default=None, help="Yandex Market Campaign ID.")
+@click.option("--api-key", default=None, help="Yandex Market Partner API Key.")
+def sync_yandex_cmd(days: int, mock: bool, campaign_id: Optional[str], api_key: Optional[str]):
+    """Synchronize orders and sales telemetry directly from Yandex Market Partner API."""
+    async def _sync():
+        await init_db()
+        from app.connectors.yandex_market import YandexMarketConnector
+        connector = YandexMarketConnector(campaign_id=campaign_id, api_key=api_key)
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=days)
+
+        click.secho(f"\n🛒 Connecting to Yandex Market ({'Sandbox/Demo' if (mock or not connector.is_configured()) else 'Live API'})...", fg="yellow", bold=True)
+        res = await connector.fetch_and_ingest(start_date=start_date, end_date=end_date, force_mock=mock)
+        if not res.get("success"):
+            click.secho(f"❌ Synchronization failed: {res.get('message')}", fg="red")
+            return
+
+        click.secho(f"✅ Successfully synchronized {res['orders_count']} Yandex Market orders ({res['metrics_created']} metric records)!", fg="green", bold=True)
+        click.echo(f"   📅 Time Window:     {res['date_from']} -> {res['date_to']}")
+        click.echo(f"   💰 Total Revenue:    {res['total_revenue']:,.2f} RUB")
+        click.echo(f"   📦 Orders Count:     {res['total_orders']}")
+        click.echo(f"   🔄 Returns/Cancels:  {res['total_refunds']:,.2f} RUB")
+        if res.get("top_regions"):
+            click.echo(f"   📍 Top Regions:      {', '.join(f'{k} ({v})' for k, v in list(res['top_regions'].items())[:3])}")
+        if res.get("top_warehouses"):
+            click.echo(f"   🏭 Top Warehouses:    {', '.join(f'{k} ({v})' for k, v in list(res['top_warehouses'].items())[:3])}")
+        click.secho("\n✨ Telemetry updated! Generate executive briefing with 'python cli.py test-report ecommerce_summary'.\n", fg="cyan")
+        await close_db()
+
+    run_async(_sync())
+
+
+
 
 @cli.command("list-reports")
 def list_reports():
