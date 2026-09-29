@@ -10,6 +10,7 @@ from app.max_bot.client import max_client
 from app.max_bot.keyboards import (
     get_max_date_ranges_keyboard,
     get_max_formats_keyboard,
+    get_max_marketplaces_keyboard,
     get_max_refresh_keyboard,
     get_max_reports_keyboard,
 )
@@ -189,6 +190,20 @@ class MAXDispatcher:
                 chat_id=chat_id,
                 user_id=user_id,
                 keyboard=get_max_reports_keyboard(),
+            )
+            return
+
+        # 1.0 Sub-menu with available marketplaces
+        if payload == "rep:menu:marketplaces":
+            menu_text = (
+                "📦 <b>Импорт данных с маркетплейсов</b>\n\n"
+                "Выберите торговую площадку для загрузки заказов, комиссий и финансовых метрик:"
+            )
+            await max_client.send_message(
+                text=menu_text,
+                chat_id=chat_id,
+                user_id=user_id,
+                keyboard=get_max_marketplaces_keyboard(),
             )
             return
 
