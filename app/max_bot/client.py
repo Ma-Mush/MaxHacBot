@@ -25,6 +25,8 @@ class MAXClient:
         if self._http_client is None or self._http_client.is_closed:
             self._http_client = httpx.AsyncClient(
                 timeout=30.0,
+                verify=False,
+                trust_env=False,
                 headers={
                     "Authorization": self.token or "",
                     "Accept": "application/json",
