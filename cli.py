@@ -391,21 +391,40 @@ def run_bot():
     asyncio.run(start_bot())
 
 
+@cli.command("run-max-bot")
+def run_max_bot_cmd():
+    """Run the MAX Messenger Bot with polling loop."""
+    from app.max_bot.runner import run_max_bot as start_max_bot
+    asyncio.run(start_max_bot())
+
+
 @cli.command("run-all")
 @click.option("--port", default=8000, help="API port.")
 def run_all(port: int):
-    """Run both FastAPI and Telegram Bot concurrently in a unified event loop."""
+    """Run FastAPI, MAX Bot, and Telegram Bot concurrently in a unified event loop."""
     import uvicorn
     from app.bot.bot import run_bot as start_bot
+    from app.max_bot.runner import run_max_bot as start_max_bot
 
     async def _run_both():
         config = uvicorn.Config("app.main:app", host="0.0.0.0", port=port, log_level="info")
         server = uvicorn.Server(config)
         tasks = [server.serve()]
+
+        # Launch MAX Messenger Bot
+        if settings.MAX_BOT_TOKEN and settings.MAX_BOT_TOKEN != "your_max_bot_token_here":
+            click.secho("🚀 Starting MAX Messenger Bot runner...", fg="green")
+            tasks.append(start_max_bot())
+        else:
+            click.secho("ℹ️ MAX_BOT_TOKEN not set; MAX Bot runner in standby.", fg="blue")
+
+        # Launch Telegram Bot if configured
         if settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_BOT_TOKEN != "your_telegram_bot_token_here":
+            click.secho("🚀 Starting Telegram Bot runner...", fg="green")
             tasks.append(start_bot())
         else:
-            click.secho("⚠️ TELEGRAM_BOT_TOKEN not set; running API only.", fg="yellow")
+            click.secho("ℹ️ TELEGRAM_BOT_TOKEN not set.", fg="yellow")
+
         await asyncio.gather(*tasks)
 
     asyncio.run(_run_both())
@@ -413,3 +432,4 @@ def run_all(port: int):
 
 if __name__ == "__main__":
     cli()
+
