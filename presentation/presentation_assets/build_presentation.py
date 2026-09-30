@@ -1,20 +1,31 @@
 #!/usr/bin/env python3
-"""Build a beautiful PDF presentation for OmniMetrics Hub (Russian)."""
+"""Build a beautiful, jury-ready PDF presentation for OmniMetrics Hub & MAX Business AI (Russian)."""
 
 import base64
 import os
 from pathlib import Path
 
-ASSETS = Path("/root/presentation_assets")
+# Paths relative to this script
+ASSETS = Path(__file__).resolve().parent
+PROJECT_DIR = ASSETS.parent.parent
+OUTPUT_DIR = ASSETS.parent
 
 def img_b64(name: str) -> str:
     """Convert image file to base64 data URI."""
     path = ASSETS / name
+    if not path.exists():
+        # Fallback to output directory if present
+        alt_path = PROJECT_DIR / "output" / name
+        if alt_path.exists():
+            path = alt_path
+        else:
+            return ""
     data = path.read_bytes()
+    mime = "image/png" if name.endswith(".png") else "image/jpeg"
     b64 = base64.b64encode(data).decode()
-    return f"data:image/jpeg;base64,{b64}"
+    return f"data:{mime};base64,{b64}"
 
-# Load all images
+# Load presentation images
 COVER = img_b64("cover.jpg")
 PROBLEM = img_b64("problem.jpg")
 SOLUTION = img_b64("solution.jpg")
@@ -43,6 +54,7 @@ body {{
   font-family: 'DejaVu Sans', 'Liberation Sans', 'Noto Sans', Arial, sans-serif;
   color: #ffffff;
   line-height: 1.4;
+  background: #0a1628;
 }}
 
 .slide {{
@@ -60,14 +72,14 @@ body {{
 
 /* ===== SLIDE 1: COVER ===== */
 .slide-cover {{
-  background: linear-gradient(135deg, #0a1628 0%, #0d2847 40%, #0f3460 70%, #16697a 100%);
+  background: linear-gradient(135deg, #07111e 0%, #0d2847 40%, #0f3460 70%, #105663 100%);
 }}
 
 .bg-img {{
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  opacity: 0.25;
+  opacity: 0.22;
   z-index: 0;
 }}
 
@@ -85,51 +97,67 @@ body {{
   align-items: center;
   height: 100%;
   text-align: center;
-  padding: 60px;
+  padding: 50px 70px;
 }}
 
 .cover-badge {{
   background: rgba(0, 210, 211, 0.15);
   border: 2px solid #00d2d3;
   border-radius: 30px;
-  padding: 8px 28px;
-  font-size: 16px;
+  padding: 8px 30px;
+  font-size: 15px;
   color: #00d2d3;
   letter-spacing: 3px;
   text-transform: uppercase;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
+  font-weight: 700;
 }}
 
 .cover-title {{
-  font-size: 58px;
+  font-size: 52px;
   font-weight: 800;
-  background: linear-gradient(90deg, #ffffff 0%, #00d2d3 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #00d2d3;
   margin-bottom: 16px;
   line-height: 1.15;
+  text-shadow: 0 4px 24px rgba(0, 210, 211, 0.5);
 }}
 
 .cover-subtitle {{
-  font-size: 24px;
-  color: #a0c4e8;
-  margin-bottom: 40px;
-  max-width: 800px;
+  font-size: 22px;
+  color: #b0d2f5;
+  margin-bottom: 34px;
+  max-width: 920px;
+  line-height: 1.5;
+}}
+
+.cover-features-row {{
+  display: flex;
+  gap: 16px;
+  margin-bottom: 34px;
+}}
+
+.cover-feature-pill {{
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(0, 210, 211, 0.35);
+  border-radius: 20px;
+  padding: 6px 18px;
+  font-size: 14px;
+  color: #e2f1ff;
 }}
 
 .cover-track {{
   background: linear-gradient(90deg, #00d2d3, #0f3460);
-  padding: 12px 40px;
+  padding: 12px 42px;
   border-radius: 8px;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   color: #ffffff;
+  box-shadow: 0 10px 30px rgba(0, 210, 211, 0.3);
 }}
 
 /* ===== SLIDE 2: PROBLEM ===== */
 .slide-problem {{
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: linear-gradient(135deg, #161a29 0%, #14233c 50%, #0f3460 100%);
 }}
 
 .split-layout {{
@@ -138,7 +166,7 @@ body {{
 }}
 
 .split-left {{
-  width: 55%;
+  width: 56%;
   padding: 50px 40px 50px 60px;
   display: flex;
   flex-direction: column;
@@ -146,7 +174,7 @@ body {{
 }}
 
 .split-right {{
-  width: 45%;
+  width: 44%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -157,7 +185,8 @@ body {{
   width: 100%;
   height: auto;
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
 }}
 
 .slide-number {{
@@ -165,7 +194,8 @@ body {{
   bottom: 20px;
   right: 40px;
   font-size: 14px;
-  color: rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.35);
+  font-weight: 600;
 }}
 
 .section-label {{
@@ -173,34 +203,34 @@ body {{
   color: #00d2d3;
   letter-spacing: 3px;
   text-transform: uppercase;
-  margin-bottom: 12px;
-  font-weight: 600;
+  margin-bottom: 10px;
+  font-weight: 700;
 }}
 
 .slide-heading {{
-  font-size: 38px;
+  font-size: 36px;
   font-weight: 800;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   line-height: 1.2;
 }}
 
 .stat-grid {{
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 18px;
 }}
 
 .stat-card {{
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 12px;
   padding: 14px 18px;
-  width: 47%;
+  width: 48%;
 }}
 
 .stat-value {{
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 800;
   color: #00d2d3;
 }}
@@ -209,17 +239,22 @@ body {{
   font-size: 12px;
   color: #a0c4e8;
   margin-top: 4px;
+  line-height: 1.4;
 }}
 
 .problem-text {{
-  font-size: 15px;
+  font-size: 14px;
   color: #cdd9e5;
-  line-height: 1.6;
+  line-height: 1.55;
+  background: rgba(255, 69, 58, 0.08);
+  border-left: 3px solid #ff4d4d;
+  padding: 10px 14px;
+  border-radius: 4px;
 }}
 
 /* ===== SLIDE 3: SOLUTION ===== */
 .slide-solution {{
-  background: linear-gradient(135deg, #0a2342 0%, #0d4449 50%, #126e72 100%);
+  background: linear-gradient(135deg, #09203a 0%, #0a3d46 50%, #0e5b60 100%);
 }}
 
 .solution-features {{
@@ -232,8 +267,8 @@ body {{
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  margin-bottom: 14px;
-  font-size: 15px;
+  margin-bottom: 13px;
+  font-size: 14.5px;
   color: #e0e8f0;
 }}
 
@@ -256,82 +291,119 @@ body {{
   color: #ffffff;
 }}
 
-/* ===== SLIDE 4: SCENARIO ===== */
+/* ===== SLIDE 4 & 5: SCENARIO & AUDIENCE ===== */
 .slide-scenario {{
-  background: linear-gradient(135deg, #1a1a2e 0%, #0d2847 100%);
-}}
-
-.scenario-flow {{
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
-  flex-wrap: wrap;
-}}
-
-.scenario-step {{
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(0,210,211,0.3);
-  border-radius: 14px;
-  padding: 18px;
-  width: 30%;
-  position: relative;
-}}
-
-.step-number {{
-  background: linear-gradient(135deg, #00d2d3, #0f3460);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 16px;
-  margin-bottom: 10px;
-}}
-
-.step-title {{
-  font-size: 16px;
-  font-weight: 700;
-  color: #00d2d3;
-  margin-bottom: 6px;
-}}
-
-.step-desc {{
-  font-size: 13px;
-  color: #a0c4e8;
-  line-height: 1.5;
+  background: linear-gradient(135deg, #131a2e 0%, #0c233c 100%);
 }}
 
 .full-slide-content {{
-  padding: 50px 60px;
+  padding: 45px 60px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   height: 100%;
 }}
 
-/* ===== SLIDE 5: ARCHITECTURE ===== */
+.scenario-flow {{
+  display: flex;
+  gap: 14px;
+  margin-top: 14px;
+}}
+
+.scenario-step {{
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(0,210,211,0.25);
+  border-radius: 12px;
+  padding: 16px;
+  flex: 1;
+  position: relative;
+}}
+
+.step-number {{
+  background: linear-gradient(135deg, #00d2d3, #0f3460);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 15px;
+  margin-bottom: 8px;
+}}
+
+.step-title {{
+  font-size: 15px;
+  font-weight: 700;
+  color: #00d2d3;
+  margin-bottom: 6px;
+}}
+
+.step-desc {{
+  font-size: 12.5px;
+  color: #b0ceeb;
+  line-height: 1.45;
+}}
+
+.hypothesis-box {{
+  background: rgba(0,210,211,0.08);
+  border-left: 4px solid #00d2d3;
+  padding: 14px 20px;
+  border-radius: 0 10px 10px 0;
+  margin-top: 18px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #d8e8f8;
+}}
+
+.metrics-row {{
+  display: flex;
+  gap: 14px;
+  margin-top: 18px;
+}}
+
+.metric-card {{
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 12px 16px;
+  flex: 1;
+  text-align: center;
+}}
+
+.metric-val {{
+  font-size: 22px;
+  font-weight: 800;
+  color: #00d2d3;
+}}
+
+.metric-label {{
+  font-size: 12px;
+  color: #9abedb;
+  margin-top: 4px;
+}}
+
+/* ===== SLIDE 6: ARCHITECTURE ===== */
 .slide-arch {{
-  background: linear-gradient(135deg, #0d1117 0%, #0a1628 50%, #0f3460 100%);
+  background: linear-gradient(135deg, #0a111a 0%, #091a2e 50%, #0e3753 100%);
 }}
 
 .arch-content {{
   display: flex;
   gap: 30px;
   height: 100%;
-  padding: 50px 60px;
+  padding: 45px 60px;
 }}
 
 .arch-left {{
-  width: 48%;
+  width: 52%;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }}
 
 .arch-right {{
-  width: 52%;
+  width: 48%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -340,8 +412,9 @@ body {{
 .arch-right img {{
   width: 100%;
   height: auto;
-  border-radius: 16px;
+  border-radius: 14px;
   box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
 }}
 
 .tech-stack {{
@@ -354,71 +427,106 @@ body {{
 .tech-badge {{
   background: rgba(0,210,211,0.12);
   border: 1px solid rgba(0,210,211,0.3);
-  border-radius: 20px;
-  padding: 5px 14px;
+  border-radius: 6px;
+  padding: 4px 10px;
   font-size: 12px;
   color: #00d2d3;
   font-weight: 600;
 }}
 
-/* ===== SLIDE 6: DEMO ===== */
-.slide-demo {{
-  background: linear-gradient(135deg, #0a1628 0%, #1a1a2e 100%);
+/* ===== SLIDE 7: AI CONTROL PANEL ===== */
+.ai-panel-grid {{
+  display: flex;
+  gap: 14px;
+  margin-top: 16px;
 }}
 
-.demo-content {{
+.ai-card {{
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 16px 14px;
+  flex: 1;
   display: flex;
   flex-direction: column;
+}}
+
+.ai-card-header {{
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
   align-items: center;
-  height: 100%;
-  padding: 40px 60px;
+  gap: 8px;
 }}
 
-.demo-img {{
-  width: 90%;
-  margin-top: 20px;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-  border: 2px solid rgba(0,210,211,0.2);
+.ai-card-badge {{
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
 }}
 
-/* ===== SLIDE 7: AS IS / TO BE ===== */
+.badge-fast {{ background: rgba(0, 210, 211, 0.2); color: #00d2d3; }}
+.badge-cloud {{ background: rgba(142, 68, 173, 0.25); color: #bb6bd9; }}
+.badge-local {{ background: rgba(39, 174, 96, 0.2); color: #2ecc71; }}
+.badge-off {{ background: rgba(231, 76, 60, 0.2); color: #e74c3c; }}
+
+.ai-card-desc {{
+  font-size: 11.5px;
+  color: #a8cae6;
+  line-height: 1.45;
+  margin-bottom: 12px;
+  min-height: 48px;
+}}
+
+.ai-card-points {{
+  list-style: none;
+  font-size: 11px;
+  color: #d0e4f7;
+  padding: 0;
+}}
+
+.ai-card-points li {{
+  margin-bottom: 6px;
+  line-height: 1.35;
+}}
+
+/* ===== SLIDE 8: AS IS / TO BE ===== */
 .slide-asistobe {{
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: linear-gradient(135deg, #101626 0%, #0d2138 100%);
 }}
 
 .comparison {{
   display: flex;
   gap: 20px;
-  margin-top: 20px;
-  flex: 1;
+  margin-top: 14px;
 }}
 
 .comparison-col {{
-  width: 50%;
-  border-radius: 16px;
-  padding: 24px;
+  flex: 1;
+  border-radius: 12px;
+  padding: 20px;
 }}
 
 .col-asis {{
-  background: rgba(231, 76, 60, 0.1);
-  border: 1px solid rgba(231, 76, 60, 0.3);
+  background: rgba(255, 69, 58, 0.08);
+  border: 1px solid rgba(255, 69, 58, 0.3);
 }}
 
 .col-tobe {{
-  background: rgba(0, 210, 211, 0.1);
-  border: 1px solid rgba(0, 210, 211, 0.3);
+  background: rgba(0, 210, 211, 0.08);
+  border: 1px solid rgba(0, 210, 211, 0.35);
 }}
 
 .col-header {{
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 800;
-  margin-bottom: 16px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid rgba(255,255,255,0.1);
+  margin-bottom: 14px;
 }}
 
-.col-asis .col-header {{ color: #e74c3c; }}
+.col-asis .col-header {{ color: #ff6b6b; }}
 .col-tobe .col-header {{ color: #00d2d3; }}
 
 .comparison-list {{
@@ -427,118 +535,90 @@ body {{
 }}
 
 .comparison-list li {{
-  font-size: 14px;
-  color: #cdd9e5;
-  padding: 6px 0;
-  padding-left: 24px;
-  position: relative;
-  line-height: 1.5;
+  font-size: 13.5px;
+  margin-bottom: 10px;
+  line-height: 1.45;
+  color: #dce7f2;
 }}
 
-.col-asis .comparison-list li::before {{
-  content: "✗";
-  position: absolute;
-  left: 0;
-  color: #e74c3c;
-  font-weight: 700;
+/* ===== SLIDE 9: MOSCOW SCOPE ===== */
+.slide-mvp {{
+  background: linear-gradient(135deg, #0e1726 0%, #0a243a 100%);
 }}
 
-.col-tobe .comparison-list li::before {{
-  content: "✓";
-  position: absolute;
-  left: 0;
-  color: #00d2d3;
-  font-weight: 700;
+.moscow-grid {{
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
 }}
 
-/* ===== SLIDE 8: SCALING ===== */
-.slide-scaling {{
-  background: linear-gradient(135deg, #0a2342 0%, #0d4449 100%);
+.moscow-col {{
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 16px;
 }}
 
-/* ===== SLIDE 9: PILOT ===== */
+.moscow-header {{
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}}
+
+.moscow-must .moscow-header {{ color: #2ecc71; }}
+.moscow-should .moscow-header {{ color: #00d2d3; }}
+.moscow-could .moscow-header {{ color: #f39c12; }}
+.moscow-wont .moscow-header {{ color: #95a5a6; }}
+
+.moscow-list {{
+  list-style: none;
+  font-size: 12.5px;
+}}
+
+.moscow-list li {{
+  margin-bottom: 7px;
+  line-height: 1.4;
+  color: #cfe1f3;
+}}
+
+/* ===== SLIDE 10: PILOT & BUSINESS ===== */
 .slide-pilot {{
-  background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 50%, #0f3460 100%);
+  background: linear-gradient(135deg, #0d1e33 0%, #0d3b48 100%);
 }}
 
 .pilot-grid {{
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 16px;
+  gap: 12px;
+  margin-top: 14px;
 }}
 
 .pilot-card {{
   background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 12px;
-  padding: 16px 20px;
-  width: 31%;
+  border: 1px solid rgba(0,210,211,0.25);
+  border-radius: 10px;
+  padding: 12px 14px;
+  width: 48%;
 }}
 
 .pilot-card-title {{
   font-size: 14px;
   font-weight: 700;
   color: #00d2d3;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }}
 
 .pilot-card-text {{
   font-size: 12px;
-  color: #a0c4e8;
-  line-height: 1.5;
-}}
-
-/* ===== SLIDE 10: MVP SCOPE ===== */
-.slide-mvp {{
-  background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d2847 100%);
-}}
-
-.moscow-grid {{
-  display: flex;
-  gap: 14px;
-  margin-top: 16px;
-}}
-
-.moscow-col {{
-  border-radius: 12px;
-  padding: 18px;
-  width: 25%;
-}}
-
-.moscow-must {{ background: rgba(0,210,211,0.12); border: 1px solid rgba(0,210,211,0.3); }}
-.moscow-should {{ background: rgba(52,152,219,0.12); border: 1px solid rgba(52,152,219,0.3); }}
-.moscow-could {{ background: rgba(241,196,15,0.12); border: 1px solid rgba(241,196,15,0.3); }}
-.moscow-wont {{ background: rgba(149,165,166,0.1); border: 1px solid rgba(149,165,166,0.3); }}
-
-.moscow-header {{
-  font-size: 16px;
-  font-weight: 800;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid rgba(255,255,255,0.1);
-}}
-
-.moscow-must .moscow-header {{ color: #00d2d3; }}
-.moscow-should .moscow-header {{ color: #3498db; }}
-.moscow-could .moscow-header {{ color: #f1c40f; }}
-.moscow-wont .moscow-header {{ color: #95a5a6; }}
-
-.moscow-list {{
-  list-style: none;
-  padding: 0;
-}}
-
-.moscow-list li {{
-  font-size: 12px;
-  color: #cdd9e5;
-  padding: 4px 0;
+  color: #a8cae6;
   line-height: 1.4;
 }}
 
 /* ===== SLIDE 11: FINAL ===== */
 .slide-final {{
-  background: linear-gradient(135deg, #0a1628 0%, #0d2847 40%, #0f3460 70%, #16697a 100%);
+  background: linear-gradient(135deg, #07111e 0%, #0d2847 40%, #0f3460 70%, #105663 100%);
 }}
 
 .final-content {{
@@ -554,71 +634,34 @@ body {{
 }}
 
 .final-title {{
-  font-size: 52px;
+  font-size: 50px;
   font-weight: 800;
-  color: #ffffff;
-  margin-bottom: 20px;
+  color: #00d2d3;
+  margin-bottom: 16px;
+  text-shadow: 0 4px 24px rgba(0, 210, 211, 0.5);
 }}
 
 .final-subtitle {{
-  font-size: 22px;
-  color: #a0c4e8;
-  max-width: 700px;
-  margin-bottom: 30px;
+  font-size: 21px;
+  color: #b0d2f5;
+  margin-bottom: 34px;
+  max-width: 820px;
+  line-height: 1.5;
 }}
 
 .final-contacts {{
   display: flex;
-  gap: 30px;
+  gap: 18px;
 }}
 
 .final-contact {{
-  background: rgba(0,210,211,0.1);
-  border: 1px solid rgba(0,210,211,0.3);
-  border-radius: 12px;
-  padding: 14px 28px;
-  color: #00d2d3;
-  font-size: 16px;
-  font-weight: 600;
-}}
-
-/* ===== HYPOTHESIS ===== */
-.hypothesis-box {{
-  background: rgba(0,210,211,0.08);
-  border-left: 4px solid #00d2d3;
-  border-radius: 0 12px 12px 0;
-  padding: 16px 20px;
-  margin: 16px 0;
-  font-size: 15px;
-  color: #e0e8f0;
-  line-height: 1.6;
-  font-style: italic;
-}}
-
-.metrics-row {{
-  display: flex;
-  gap: 12px;
-  margin-top: 14px;
-}}
-
-.metric-card {{
-  background: rgba(255,255,255,0.06);
+  background: rgba(0, 210, 211, 0.15);
+  border: 1px solid #00d2d3;
   border-radius: 10px;
-  padding: 12px 16px;
-  text-align: center;
-  flex: 1;
-}}
-
-.metric-val {{
-  font-size: 22px;
-  font-weight: 800;
-  color: #00d2d3;
-}}
-
-.metric-label {{
-  font-size: 11px;
-  color: #a0c4e8;
-  margin-top: 3px;
+  padding: 10px 22px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
 }}
 
 </style>
@@ -629,13 +672,19 @@ body {{
 <div class="slide slide-cover">
   <div class="bg-img"><img src="{COVER}"></div>
   <div class="cover-content">
-    <div class="cover-badge">Хакатон 2026</div>
-    <div class="cover-title">OmniMetrics Hub</div>
+    <div class="cover-badge">Хакатон 2026 • AI & Data Track</div>
+    <div class="cover-title">OmniMetrics Hub & MAX AI</div>
     <div class="cover-subtitle">
-      Единая платформа бизнес-аналитики с AI-инсайтами<br>
-      и доставкой отчётов через мессенджер МАКС
+      Автономный центр сквозной бизнес-аналитики маркетплейсов,<br>
+      умной генерации отчетов и AI-инсайтов в мессенджере MAX
     </div>
-    <div class="cover-track">Трек: Эффективный бизнес</div>
+    <div class="cover-features-row">
+      <div class="cover-feature-pill">📱 Бот в MAX Messenger</div>
+      <div class="cover-feature-pill">🛒 WB • Ozon • Я.Маркет • Купер</div>
+      <div class="cover-feature-pill">🧠 AI Control Panel (API / Ollama / Rules)</div>
+      <div class="cover-feature-pill">📄 PDF • Excel • PNG</div>
+    </div>
+    <div class="cover-track">Трек: «Эффективный бизнес»</div>
   </div>
   <div class="slide-number">01 / 11</div>
 </div>
@@ -644,29 +693,28 @@ body {{
 <div class="slide slide-problem">
   <div class="split-layout">
     <div class="split-left">
-      <div class="section-label">Проблема</div>
-      <div class="slide-heading">Данные есть.<br>Понимания — нет.</div>
+      <div class="section-label">Проблема бизнеса</div>
+      <div class="slide-heading">Данные разрознены.<br>Аналитика запаздывает.</div>
       <div class="stat-grid">
         <div class="stat-card">
           <div class="stat-value">6,6 млн</div>
-          <div class="stat-desc">субъектов МСП зарегистрировано в России (2026)</div>
+          <div class="stat-desc">субъектов МСП в РФ, активно выходящих в онлайн и e-commerce</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">83%</div>
-          <div class="stat-desc">предпринимателей ведут учёт в Excel вручную</div>
+          <div class="stat-desc">селлеров сводят продажи и возвраты в Excel вручную</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">5+ часов</div>
-          <div class="stat-desc">в неделю тратится на сбор и подготовку отчётов</div>
+          <div class="stat-desc">в неделю уходит на сбор отчетов из разных личных кабинетов</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">72%</div>
-          <div class="stat-desc">принимают решения без аналитической поддержки</div>
+          <div class="stat-desc">решений принимаются вслепую из-за задержки цифр и сложного BI</div>
         </div>
       </div>
       <div class="problem-text">
-        Малый и средний бизнес накапливает данные из десятков источников, но не имеет 
-        простого инструмента для их агрегации, визуализации и получения рекомендаций.
+        Селлеры теряют чистую маржу из-за скрытых возвратов, изменения комиссий маркетплейсов и кассовых разрывов. Тяжелые enterprise BI-системы сложны и недоступны малому бизнесу.
       </div>
     </div>
     <div class="split-right">
@@ -681,31 +729,31 @@ body {{
   <div class="split-layout">
     <div class="split-left">
       <div class="section-label">Наше решение</div>
-      <div class="slide-heading">OmniMetrics Hub</div>
+      <div class="slide-heading">OmniMetrics Hub в MAX</div>
       <ul class="solution-features">
         <li>
-          <div class="feature-icon">📊</div>
-          <div><span class="feature-title">Универсальный REST API</span> — загрузите любые числовые метрики с гибкими тегами, без миграций БД</div>
+          <div class="feature-icon">🛒</div>
+          <div><span class="feature-title">Прямые коннекторы к маркетплейсам</span> — Wildberries, Ozon, Яндекс.Маркет, СберМаркет (Купер) синхронизируются в 1 клик.</div>
         </li>
         <li>
-          <div class="feature-icon">🤖</div>
-          <div><span class="feature-title">Бот в мессенджере МАКС</span> — получайте отчёты прямо в корпоративном мессенджере через удобное inline-меню</div>
+          <div class="feature-icon">📱</div>
+          <div><span class="feature-title">Нативный бот в MAX Messenger</span> — кнопки, выбор периода, нативная разметка Markdown и моментальная выдача файлов.</div>
         </li>
         <li>
           <div class="feature-icon">🧠</div>
-          <div><span class="feature-title">AI Executive Briefing</span> — искусственный интеллект анализирует тренды и даёт рекомендации</div>
+          <div><span class="feature-title">Умный AI Control Panel</span> — свобода выбора: бесплатный детерминированный алгоритм, облачные LLM по API или локальная Ollama.</div>
         </li>
         <li>
           <div class="feature-icon">📄</div>
-          <div><span class="feature-title">Мультиформат</span> — PDF, Excel, PNG-графики, Google Sheets — всё в одном</div>
+          <div><span class="feature-title">Мультиформатная выгрузка</span> — полиграфический PDF с графиками, книга Excel (.xlsx) со стилями и формулами, PNG-карточки.</div>
         </li>
         <li>
-          <div class="feature-icon">🔌</div>
-          <div><span class="feature-title">Плагинная архитектура</span> — добавьте свой тип отчёта, просто создав Python-файл</div>
+          <div class="feature-icon">🛑</div>
+          <div><span class="feature-title">Приватность и контроль</span> — возможность в любой момент отключить нейросеть одной кнопкой без утечки коммерческой тайны.</div>
         </li>
         <li>
           <div class="feature-icon">🐳</div>
-          <div><span class="feature-title">Одна команда</span> — <code>docker compose up</code> и платформа работает</div>
+          <div><span class="feature-title">Развертывание за 60 секунд</span> — <code>docker compose up</code>, автомиграции и открытая архитектура.</div>
         </li>
       </ul>
     </div>
@@ -719,49 +767,46 @@ body {{
 <!-- ==================== SLIDE 4: TARGET AUDIENCE ==================== -->
 <div class="slide slide-scenario">
   <div class="full-slide-content">
-    <div class="section-label">Целевая аудитория</div>
-    <div class="slide-heading">Для кого мы создаём продукт</div>
+    <div class="section-label">Целевая аудитория и гипотеза ценности</div>
+    <div class="slide-heading">Для кого создан наш продукт</div>
     <div class="scenario-flow">
       <div class="scenario-step">
         <div class="step-number">1</div>
-        <div class="step-title">Владельцы e-commerce</div>
-        <div class="step-desc">Интернет-магазины и маркетплейсы, которые хотят отслеживать выручку, заказы, конверсию, средний чек и получать рекомендации по росту</div>
+        <div class="step-title">Селлеры маркетплейсов</div>
+        <div class="step-desc">Магазины на WB, Ozon, Я.Маркете и Купере. Требуется сквозной контроль выручки, среднего чека, возвратов и рентабельности складов.</div>
       </div>
       <div class="scenario-step">
         <div class="step-number">2</div>
-        <div class="step-title">Операционные менеджеры</div>
-        <div class="step-desc">Сотрудники, отвечающие за KPI, которым нужны автоматические отчёты по расписанию без ручного сбора данных из разных систем</div>
+        <div class="step-title">Финансовые директора (CFO)</div>
+        <div class="step-desc">Управленцы, которым нужны оперативные сводные данные без ожидания ручных таблиц от аналитиков и рутины в 1С.</div>
       </div>
       <div class="scenario-step">
         <div class="step-number">3</div>
         <div class="step-title">Руководители МСП</div>
-        <div class="step-desc">Предприниматели, которым нужна «панель управления» бизнесом в привычном мессенджере, а не сложные BI-системы</div>
+        <div class="step-desc">Предприниматели, которым нужен компактный «карманный аналитик» в удобном мессенджере вместо дорогих зарубежных BI-систем.</div>
       </div>
     </div>
     
     <div class="hypothesis-box">
-      <strong>Гипотеза:</strong> Если мы поможем <u>предпринимателю МСП</u> получить 
-      <u>аналитический отчёт с AI-рекомендациями</u> через <u>бота в мессенджере МАКС за 30 секунд</u>, 
-      то <u>время принятия решений</u> сократится в <u>5 раз</u>, потому что данные из различных 
-      источников будут автоматически агрегированы и визуализированы.
+      <strong>Проверенная гипотеза:</strong> Предоставив селлеру <u>автономного бизнес-ассистента в MAX Messenger</u>, формирующего <u>полный управленческий отчет за 30 секунд</u>, мы <u>высвобождаем до 20 часов рабочего времени в месяц</u> и <u>ускоряем принятие решений в 5 раз</u>, исключая человеческий фактор и ошибки сведения таблиц.
     </div>
 
     <div class="metrics-row">
       <div class="metric-card">
         <div class="metric-val">5 ч → 30 сек</div>
-        <div class="metric-label">Время создания отчёта</div>
+        <div class="metric-label">Время создания отчета</div>
       </div>
       <div class="metric-card">
-        <div class="metric-val">0 → 100%</div>
-        <div class="metric-label">Доля автоматизации</div>
+        <div class="metric-val">4 площадки</div>
+        <div class="metric-label">В едином окне MAX</div>
       </div>
       <div class="metric-card">
-        <div class="metric-val">−80%</div>
-        <div class="metric-label">Ручных действий</div>
+        <div class="metric-val">0 руб / мес</div>
+        <div class="metric-label">Без обязательных подписок на BI</div>
       </div>
       <div class="metric-card">
-        <div class="metric-val">+AI</div>
-        <div class="metric-label">Рекомендации к данным</div>
+        <div class="metric-val">100% приватность</div>
+        <div class="metric-label">Локальный запуск без передачи данных</div>
       </div>
     </div>
   </div>
@@ -769,42 +814,42 @@ body {{
 </div>
 
 <!-- ==================== SLIDE 5: USER SCENARIO ==================== -->
-<div class="slide slide-scenario" style="background: linear-gradient(135deg, #0a2342 0%, #0d4449 100%);">
+<div class="slide slide-scenario" style="background: linear-gradient(135deg, #091e36 0%, #0a3540 100%);">
   <div class="full-slide-content">
     <div class="section-label">Пользовательский сценарий</div>
-    <div class="slide-heading">Путь пользователя от данных до решения</div>
+    <div class="slide-heading">Путь пользователя в мессенджере MAX</div>
     <div class="scenario-flow">
       <div class="scenario-step">
         <div class="step-number">1</div>
-        <div class="step-title">Загрузка метрик</div>
-        <div class="step-desc">Предприниматель отправляет метрики через REST API из CRM, 1С, маркетплейса или вручную. Поддержка единичной и пакетной загрузки до 5 000 записей.</div>
+        <div class="step-title">Синхронизация данных</div>
+        <div class="step-desc">Пользователь в 1 клик запускает синхронизацию Wildberries, Ozon, Я.Маркета, Купера или загружает файл CSV/Excel с продажами.</div>
       </div>
       <div class="scenario-step">
         <div class="step-number">2</div>
-        <div class="step-title">Запрос отчёта</div>
-        <div class="step-desc">В мессенджере МАКС пользователь нажимает кнопку «📊 Отчёты», выбирает тип (общая аналитика или e-commerce) и период (7/30/90 дней).</div>
+        <div class="step-title">Интерактивное меню</div>
+        <div class="step-desc">В боте MAX открывается нативное меню: выбор отчета (Сводка E-Commerce или KPI метрик) и желаемого периода (7, 30 дней, Месяц).</div>
       </div>
       <div class="scenario-step">
         <div class="step-number">3</div>
-        <div class="step-title">Генерация</div>
-        <div class="step-desc">Система агрегирует данные, строит графики, формирует таблицы и запрашивает AI-анализ трендов и аномалий.</div>
+        <div class="step-title">Выбор движка AI</div>
+        <div class="step-desc">В панели управления можно выбрать: Встроенный быстрый алгоритм, облачную LLM (GigaChat/DeepSeek/OpenAI) или локальную Ollama.</div>
       </div>
     </div>
     <div class="scenario-flow" style="margin-top: 14px;">
       <div class="scenario-step">
         <div class="step-number">4</div>
-        <div class="step-title">Доставка результата</div>
-        <div class="step-desc">Бот отправляет: PDF-отчёт со стилизованными графиками, Excel-таблицу с данными, PNG-превью для быстрого просмотра.</div>
+        <div class="step-title">Мгновенный расчет</div>
+        <div class="step-desc">Система агрегирует показатели, вычисляет дельты к прошлому периоду, строит графики трендов и долей каналов продаж.</div>
       </div>
       <div class="scenario-step">
         <div class="step-number">5</div>
-        <div class="step-title">AI-брифинг</div>
-        <div class="step-desc">Текстовый блок с ключевыми выводами: «Выручка выросла на 12%, но конверсия снижается — рекомендуем оптимизировать воронку».</div>
+        <div class="step-title">Управленческий инсайт</div>
+        <div class="step-desc">Бот выдает 4 четких пункта: Главный рост, Точка внимания, Паттерн/Аномалия и Рекомендация для команды селлера.</div>
       </div>
       <div class="scenario-step">
         <div class="step-number">6</div>
-        <div class="step-title">Автоматизация</div>
-        <div class="step-desc">Настройка расписания: ежедневные или еженедельные отчёты автоматически приходят в чат МАКС без действий пользователя.</div>
+        <div class="step-title">Доставка артефактов</div>
+        <div class="step-desc">Пользователь получает PDF-отчет для руководства, файл Excel для глубокого аудита и PNG-карточку для мобильного чтения.</div>
       </div>
     </div>
   </div>
@@ -815,39 +860,39 @@ body {{
 <div class="slide slide-arch">
   <div class="arch-content">
     <div class="arch-left">
-      <div class="section-label">Архитектура</div>
-      <div class="slide-heading" style="font-size: 34px;">Технологический стек</div>
-      <ul class="solution-features" style="margin-top: 10px;">
+      <div class="section-label">Архитектура решения</div>
+      <div class="slide-heading" style="font-size: 32px;">Стек и архитектурные решения</div>
+      <ul class="solution-features" style="margin-top: 6px;">
         <li>
           <div class="feature-icon">⚡</div>
-          <div><span class="feature-title">FastAPI</span> — асинхронный REST API с Pydantic v2 валидацией</div>
-        </li>
-        <li>
-          <div class="feature-icon">🗄</div>
-          <div><span class="feature-title">PostgreSQL / SQLite</span> — JSONB хранение тегов без миграций</div>
+          <div><span class="feature-title">FastAPI + SQLAlchemy 2.0</span> — асинхронный высокопроизводительный бэкенд с JSONB-хранилищем метрик.</div>
         </li>
         <li>
           <div class="feature-icon">📱</div>
-          <div><span class="feature-title">MAX Bot API</span> — бот в мессенджере МАКС с inline-клавиатурой, Webhook и авторизацией</div>
+          <div><span class="feature-title">MAX Bot API (platform-api2.max.ru)</span> — нативная интеграция, Markdown-разметка, callback-кнопки, отправка документов.</div>
         </li>
         <li>
-          <div class="feature-icon">📈</div>
-          <div><span class="feature-title">Plotly + Matplotlib</span> — авто-выбор типа визуализации</div>
+          <div class="feature-icon">🔌</div>
+          <div><span class="feature-title">Коннекторы маркетплейсов</span> — отдельные модули для Wildberries, Ozon, Яндекс.Маркета, СберМаркета с mock-песочницей.</div>
         </li>
         <li>
-          <div class="feature-icon">🤖</div>
-          <div><span class="feature-title">LLM (OpenAI/Anthropic/Ollama)</span> — AI-анализ с привязкой к источникам</div>
+          <div class="feature-icon">📑</div>
+          <div><span class="feature-title">Движок экспорта (WeasyPrint + openpyxl)</span> — генерация корпоративных PDF и Excel без внешних платных сервисов.</div>
+        </li>
+        <li>
+          <div class="feature-icon">🧠</div>
+          <div><span class="feature-title">Multi-Engine AI Broker</span> — единый интерфейс к эвристике, GigaChat, DeepSeek, OpenAI и Ollama с функцией отключения.</div>
         </li>
       </ul>
       <div class="tech-stack">
         <span class="tech-badge">Python 3.12</span>
+        <span class="tech-badge">FastAPI</span>
+        <span class="tech-badge">MAX Bot API</span>
         <span class="tech-badge">Docker</span>
-        <span class="tech-badge">SQLAlchemy 2.0</span>
         <span class="tech-badge">WeasyPrint</span>
         <span class="tech-badge">openpyxl</span>
-        <span class="tech-badge">APScheduler</span>
-        <span class="tech-badge">Jinja2</span>
-        <span class="tech-badge">Pydantic v2</span>
+        <span class="tech-badge">Plotly</span>
+        <span class="tech-badge">PostgreSQL</span>
       </div>
     </div>
     <div class="arch-right">
@@ -857,101 +902,147 @@ body {{
   <div class="slide-number">06 / 11</div>
 </div>
 
-<!-- ==================== SLIDE 7: DEMO ==================== -->
-<div class="slide slide-demo">
-  <div class="demo-content">
-    <div class="section-label">Демонстрация</div>
-    <div class="slide-heading" style="font-size: 34px;">Работающий MVP: 1 595 метрик за 60 дней</div>
-    <img class="demo-img" src="{DASHBOARD}">
+<!-- ==================== SLIDE 7: AI CONTROL PANEL ==================== -->
+<div class="slide slide-scenario">
+  <div class="full-slide-content">
+    <div class="section-label">Уникальная функциональность</div>
+    <div class="slide-heading" style="font-size: 32px;">Панель управления AI и аналитикой (AI Control Panel)</div>
+    <p style="font-size: 14px; color: #c0ddf8; margin-bottom: 12px;">
+      Бизнес сам решает, как обрабатывать данные: максимальная скорость, умные облачные модели или 100% изоляция.
+    </p>
+    <div class="ai-panel-grid">
+      <div class="ai-card">
+        <div class="ai-card-header">
+          <span>⚡ Встроенный анализатор</span>
+          <span class="ai-card-badge badge-fast">0 сек</span>
+        </div>
+        <div class="ai-card-desc">
+          Детерминированный алгоритмический расчет на основе статистики, дельт и бизнес-правил.
+        </div>
+        <ul class="ai-card-points">
+          <li>✓ Работает без интернета и ключей</li>
+          <li>✓ 100% предсказуемый результат</li>
+          <li>✓ 4 четких пункта рекомендаций</li>
+          <li>✓ Идеален для ежедневного мониторинга</li>
+        </ul>
+      </div>
+
+      <div class="ai-card">
+        <div class="ai-card-header">
+          <span>🌐 Облачные LLM (API)</span>
+          <span class="ai-card-badge badge-cloud">Cloud AI</span>
+        </div>
+        <div class="ai-card-desc">
+          Глубокий анализ контекста и формулирование стратегических гипотез через передовые нейросети.
+        </div>
+        <ul class="ai-card-points">
+          <li>✓ GigaChat (Сбер) • DeepSeek</li>
+          <li>✓ OpenAI GPT-4o • Groq • Claude</li>
+          <li>✓ Ввод ключа прямо в чате MAX</li>
+          <li>✓ Автоматический fallback при сбоях</li>
+        </ul>
+      </div>
+
+      <div class="ai-card">
+        <div class="ai-card-header">
+          <span>💻 Локальная Ollama</span>
+          <span class="ai-card-badge badge-local">On-Premise</span>
+        </div>
+        <div class="ai-card-desc">
+          Автономный запуск открытых моделей непосредственно на сервере компании.
+        </div>
+        <ul class="ai-card-points">
+          <li>✓ Llama 3 • Mistral • Qwen 2.5</li>
+          <li>✓ Коммерческая тайна не утекает в сеть</li>
+          <li>✓ Проверка связи с демоном из бота</li>
+          <li>✓ Нулевая стоимость за токены</li>
+        </ul>
+      </div>
+
+      <div class="ai-card">
+        <div class="ai-card-header">
+          <span>🛑 Отключение AI</span>
+          <span class="ai-card-badge badge-off">1 Клик</span>
+        </div>
+        <div class="ai-card-desc">
+          Мгновенный возврат к надежному встроенному алгоритму по кнопке в интерфейсе или CLI.
+        </div>
+        <ul class="ai-card-points">
+          <li>✓ Кнопка в меню: «Отключить AI»</li>
+          <li>✓ Консольная команда: disable-ai</li>
+          <li>✓ Честная маркировка в отчетах</li>
+          <li>✓ Полный контроль со стороны селлера</li>
+        </ul>
+      </div>
+    </div>
   </div>
   <div class="slide-number">07 / 11</div>
 </div>
 
-<!-- ==================== SLIDE 8: AS IS / TO BE ==================== -->
-<div class="slide slide-asistobe">
-  <div class="full-slide-content">
-    <div class="section-label">Трансформация процесса</div>
-    <div class="slide-heading" style="font-size: 34px;">Как меняется работа с данными</div>
-    <div class="comparison">
-      <div class="comparison-col col-asis">
-        <div class="col-header">⛔ Как сейчас (As Is)</div>
-        <ul class="comparison-list">
-          <li>Данные хранятся в разрозненных Excel-файлах</li>
-          <li>Ручной сбор из CRM, маркетплейсов, бухгалтерии</li>
-          <li>Отчёты готовятся вручную 5+ часов в неделю</li>
-          <li>Нет единой визуализации трендов</li>
-          <li>Решения принимаются «на глаз» без аналитики</li>
-          <li>Нет оповещений об аномалиях и отклонениях</li>
-          <li>Для BI-системы нужен дорогой специалист</li>
-          <li>Данные устаревают к моменту анализа</li>
-        </ul>
-      </div>
-      <div class="comparison-col col-tobe">
-        <div class="col-header">✅ С OmniMetrics (To Be)</div>
-        <ul class="comparison-list">
-          <li>Единый REST API для всех источников данных</li>
-          <li>Автоматическая агрегация при загрузке через API</li>
-          <li>Отчёт генерируется за 30 секунд по кнопке в МАКС</li>
-          <li>Интерактивные графики с авто-выбором типа</li>
-          <li>AI-рекомендации на основе анализа трендов</li>
-          <li>Автоматические отчёты по расписанию</li>
-          <li>Запуск одной командой: docker compose up</li>
-          <li>Актуальные данные в реальном времени</li>
-        </ul>
-      </div>
+<!-- ==================== SLIDE 8: DEMO & MARKETPLACES ==================== -->
+<div class="slide slide-demo">
+  <div class="arch-content">
+    <div class="arch-left" style="width: 50%;">
+      <div class="section-label">Сквозной E-Commerce Контур</div>
+      <div class="slide-heading" style="font-size: 32px;">Единый центр управления продажами</div>
+      <ul class="solution-features">
+        <li>
+          <div class="feature-icon">🟣</div>
+          <div><span class="feature-title">Wildberries</span> — отслеживание динамики заказов, выкупов, доли возвратов и отгрузок по складам.</div>
+        </li>
+        <li>
+          <div class="feature-icon">🔵</div>
+          <div><span class="feature-title">Ozon</span> — учет комиссий, статусов отправлений (FBO/FBS) и кластерного спроса.</div>
+        </li>
+        <li>
+          <div class="feature-icon">🟡</div>
+          <div><span class="feature-title">Яндекс.Маркет</span> — контроль выручки, партнерских тарифов и оборачиваемости.</div>
+        </li>
+        <li>
+          <div class="feature-icon">🟢</div>
+          <div><span class="feature-title">СберМаркет / Купер</span> — учет GMV, эффективности розничных точек и географии городов.</div>
+        </li>
+        <li>
+          <div class="feature-icon">📂</div>
+          <div><span class="feature-title">Импорт CSV/Excel</span> — быстрая загрузка исторических данных из любых учетных систем (1С, МойСклад).</div>
+        </li>
+      </ul>
+    </div>
+    <div class="arch-right" style="width: 50%;">
+      <img src="{DASHBOARD}">
     </div>
   </div>
   <div class="slide-number">08 / 11</div>
 </div>
 
-<!-- ==================== SLIDE 9: MVP SCOPE ==================== -->
-<div class="slide slide-mvp">
+<!-- ==================== SLIDE 9: AS IS / TO BE ==================== -->
+<div class="slide slide-asistobe">
   <div class="full-slide-content">
-    <div class="section-label">Границы MVP</div>
-    <div class="slide-heading" style="font-size: 34px;">Приоритизация по MoSCoW</div>
-    <div class="moscow-grid">
-      <div class="moscow-col moscow-must">
-        <div class="moscow-header">Must Have</div>
-        <ul class="moscow-list">
-          <li>✓ REST API (загрузка метрик)</li>
-          <li>✓ Пакетная загрузка до 5000</li>
-          <li>✓ Бот в мессенджере МАКС с авторизацией</li>
-          <li>✓ Генерация PDF-отчётов</li>
-          <li>✓ Визуализация графиками</li>
-          <li>✓ 2 встроенных типа отчётов</li>
-          <li>✓ Docker-деплой</li>
+    <div class="section-label">Трансформация бизнес-процесса</div>
+    <div class="slide-heading" style="font-size: 34px;">Как OmniMetrics меняет работу селлера</div>
+    <div class="comparison">
+      <div class="comparison-col col-asis">
+        <div class="col-header">⛔ Как было раньше (As Is)</div>
+        <ul class="comparison-list">
+          <li>• Ручной вход в 4 разных личных кабинета селлера каждый день</li>
+          <li>• Скачивание десятка сырых Excel-файлов с несовпадающими колонками</li>
+          <li>• Сведение таблиц руками: 5+ часов рутины каждую неделю</li>
+          <li>• Риск человеческой ошибки при расчете комиссий и возвратов</li>
+          <li>• Отчетность запаздывает: решения принимаются с задержкой в неделю</li>
+          <li>• Нет готовых выводов: предприниматель тратит часы на чтение графиков</li>
+          <li>• Для корпоративных отчетов нужен штатный дорогой аналитик</li>
         </ul>
       </div>
-      <div class="moscow-col moscow-should">
-        <div class="moscow-header">Should Have</div>
-        <ul class="moscow-list">
-          <li>✓ Excel-экспорт</li>
-          <li>✓ PNG-превью графиков</li>
-          <li>✓ AI Executive Briefing</li>
-          <li>✓ Inline-клавиатура</li>
-          <li>✓ Выбор периода</li>
-          <li>✓ Автоматическое расписание</li>
-          <li>✓ Плагинная архитектура</li>
-        </ul>
-      </div>
-      <div class="moscow-col moscow-could">
-        <div class="moscow-header">Could Have</div>
-        <ul class="moscow-list">
-          <li>○ Google Sheets синхронизация</li>
-          <li>○ Webhook-уведомления</li>
-          <li>○ Мультиязычность</li>
-          <li>○ Дашборд-интерфейс</li>
-          <li>○ Экспорт в Notion</li>
-        </ul>
-      </div>
-      <div class="moscow-col moscow-wont">
-        <div class="moscow-header">Won't Have</div>
-        <ul class="moscow-list">
-          <li>— Мини-приложение MAX</li>
-          <li>— Мультитенантность</li>
-          <li>— Пользовательские роли</li>
-          <li>— ML-предсказания</li>
-          <li>— Мобильное приложение</li>
+      <div class="comparison-col col-tobe">
+        <div class="col-header">✅ С OmniMetrics в MAX (To Be)</div>
+        <ul class="comparison-list">
+          <li>• Все площадки (WB, Ozon, Я.Маркет, Купер) подключены к единому хабу</li>
+          <li>• Данные нормализуются и раскладываются по тегам автоматически</li>
+          <li>• Отчет формируется за 30 секунд по одной кнопке в MAX Messenger</li>
+          <li>• Исключены математические ошибки и путаница в формулах</li>
+          <li>• Управленческие решения принимаются день в день по свежим цифрам</li>
+          <li>• Готовая сводка из 4 пунктов: что растет, где риск и что делать</li>
+          <li>• Профессиональный PDF и Excel готовы к отправке инвесторам и руководству</li>
         </ul>
       </div>
     </div>
@@ -959,41 +1050,53 @@ body {{
   <div class="slide-number">09 / 11</div>
 </div>
 
-<!-- ==================== SLIDE 10: SCALING & PILOT ==================== -->
-<div class="slide slide-pilot">
-  <div class="split-layout">
-    <div class="split-left">
-      <div class="section-label">Масштабирование и пилот</div>
-      <div class="slide-heading" style="font-size: 32px;">Путь от MVP к тиражированию</div>
-      <div class="pilot-grid">
-        <div class="pilot-card">
-          <div class="pilot-card-title">🎯 Пилотный запуск</div>
-          <div class="pilot-card-text">10-20 предпринимателей e-commerce в одном регионе (Москва/МО). Бесплатный доступ на 3 месяца.</div>
-        </div>
-        <div class="pilot-card">
-          <div class="pilot-card-title">📊 Метрики пилота</div>
-          <div class="pilot-card-text">MAU, кол-во отчётов/день, NPS, % удержания, время до первого отчёта.</div>
-        </div>
-        <div class="pilot-card">
-          <div class="pilot-card-title">🔄 Ядро продукта</div>
-          <div class="pilot-card-text">API, движок отчётов, AI-анализ, бот — не меняются при масштабировании.</div>
-        </div>
-        <div class="pilot-card">
-          <div class="pilot-card-title">🌍 Адаптация</div>
-          <div class="pilot-card-text">Региональные данные, справочники, интеграции с местными системами (1С, МойСклад).</div>
-        </div>
-        <div class="pilot-card">
-          <div class="pilot-card-title">📈 Масштаб</div>
-          <div class="pilot-card-text">Розничная торговля → HoReCa → производство → B2B-услуги. Вся Россия.</div>
-        </div>
-        <div class="pilot-card">
-          <div class="pilot-card-title">⚠️ Риски</div>
-          <div class="pilot-card-text">Качество данных от пользователей, нагрузка AI при росте, интеграция с legacy-системами.</div>
-        </div>
+<!-- ==================== SLIDE 10: MVP SCOPE & ROADMAP ==================== -->
+<div class="slide slide-mvp">
+  <div class="full-slide-content">
+    <div class="section-label">Границы MVP и планы развития</div>
+    <div class="slide-heading" style="font-size: 34px;">Реализация по MoSCoW и дорожная карта</div>
+    <div class="moscow-grid">
+      <div class="moscow-col moscow-must">
+        <div class="moscow-header">✓ Must Have (100% Готово)</div>
+        <ul class="moscow-list">
+          <li>✓ Интерактивный бот MAX Messenger</li>
+          <li>✓ Нативная Markdown-разметка</li>
+          <li>✓ Коннекторы WB, Ozon, ЯМ, Купер</li>
+          <li>✓ Генерация полиграфических PDF</li>
+          <li>✓ Стилизованные книги Excel (.xlsx)</li>
+          <li>✓ REST API приема метрик (до 5000)</li>
+          <li>✓ Деплой в Docker Compose</li>
+        </ul>
       </div>
-    </div>
-    <div class="split-right">
-      <img src="{PILOT}">
+      <div class="moscow-col moscow-should">
+        <div class="moscow-header">✓ Should Have (100% Готово)</div>
+        <ul class="moscow-list">
+          <li>✓ AI Control Panel (API/Ollama/Rules)</li>
+          <li>✓ Кнопка быстрого отключения AI</li>
+          <li>✓ Ручной импорт CSV/Excel файлов</li>
+          <li>✓ Встроенный эвристический аналитик</li>
+          <li>✓ Графики трендов и долей (PNG)</li>
+          <li>✓ Консольный CLI-интерфейс</li>
+          <li>✓ Telegram-бот на aiogram 3.x</li>
+        </ul>
+      </div>
+      <div class="moscow-col moscow-could">
+        <div class="moscow-header">○ Дорожная карта (Q4 2026)</div>
+        <ul class="moscow-list">
+          <li>○ Прямая интеграция с 1С и МойСклад</li>
+          <li>○ Банковский Open API (Сбер, Т-Банк)</li>
+          <li>○ Предиктивный расчет потребности в поставках</li>
+          <li>○ Контроль маржинальности каждого SKU</li>
+          <li>○ Автоуведомления об аномалиях продаж</li>
+        </ul>
+      </div>
+      <div class="moscow-col moscow-wont">
+        <div class="moscow-header">— За рамками хакатона</div>
+        <ul class="moscow-list">
+          <li>— Собственное мобильное приложение (мессенджера MAX достаточно)</li>
+          <li>— Автоматическое изменение цен в ЛК селлера (безопасность бизнеса)</li>
+        </ul>
+      </div>
     </div>
   </div>
   <div class="slide-number">10 / 11</div>
@@ -1003,18 +1106,18 @@ body {{
 <div class="slide slide-final">
   <div class="bg-img"><img src="{COVER}"></div>
   <div class="final-content">
-    <div class="final-title">Спасибо!</div>
+    <div class="final-title">OmniMetrics Hub & MAX AI</div>
     <div class="final-subtitle">
-      OmniMetrics Hub — ваш бизнес-аналитик в мессенджере МАКС.<br>
-      Загрузите данные. Получите инсайты. Принимайте решения.
+      Ваш умный бизнес-ассистент и центр управления аналитикой в мессенджере MAX.<br>
+      Синхронизируйте маркетплейсы. Получайте инсайты. Масштабируйте бизнес.
     </div>
     <div class="final-contacts">
+      <div class="final-contact">🤖 Бот: @t115_hakaton_max_bot</div>
+      <div class="final-contact">🧪 25 пройденных автотестов</div>
       <div class="final-contact">🐳 docker compose up</div>
-      <div class="final-contact">📊 1 595 тестовых метрик</div>
-      <div class="final-contact">🧪 20 тестов пройдено</div>
     </div>
-    <div style="margin-top: 30px; color: #a0c4e8; font-size: 16px;">
-      Трек «Эффективный бизнес» • Хакатон 2026
+    <div style="margin-top: 26px; color: #a0c4e8; font-size: 15px;">
+      Хакатон 2026 • Трек «Эффективный бизнес» • Команда OmniMetrics
     </div>
   </div>
   <div class="slide-number">11 / 11</div>
@@ -1025,13 +1128,13 @@ body {{
 """
 
 # Write HTML
-html_path = Path("/root/presentation.html")
+html_path = OUTPUT_DIR / "presentation.html"
 html_path.write_text(HTML, encoding="utf-8")
 print(f"✅ HTML saved to {html_path}")
 
 # Generate PDF with WeasyPrint
 from weasyprint import HTML as WHTML
-pdf_path = "/root/presentation.pdf"
-WHTML(filename=str(html_path)).write_pdf(pdf_path)
+pdf_path = OUTPUT_DIR / "presentation.pdf"
+WHTML(filename=str(html_path)).write_pdf(str(pdf_path))
 print(f"✅ PDF saved to {pdf_path}")
-print(f"   File size: {os.path.getsize(pdf_path) / 1024 / 1024:.1f} MB")
+print(f"   File size: {os.path.getsize(pdf_path) / 1024 / 1024:.2f} MB")
