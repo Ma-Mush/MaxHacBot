@@ -437,33 +437,33 @@ body {{
 /* ===== SLIDE 7: AI CONTROL PANEL ===== */
 .ai-panel-grid {{
   display: flex;
-  gap: 14px;
-  margin-top: 16px;
+  gap: 20px;
+  margin-top: 18px;
 }}
 
 .ai-card {{
   background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 12px;
-  padding: 16px 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 14px;
+  padding: 24px 22px 26px 22px;
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  box-sizing: border-box;
+  min-height: 380px;
 }}
 
 .ai-card-header {{
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
 }}
 
 .ai-card-badge {{
   font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
   font-weight: 700;
   text-transform: uppercase;
 }}
@@ -471,26 +471,26 @@ body {{
 .badge-fast {{ background: rgba(0, 210, 211, 0.2); color: #00d2d3; }}
 .badge-cloud {{ background: rgba(142, 68, 173, 0.25); color: #bb6bd9; }}
 .badge-local {{ background: rgba(39, 174, 96, 0.2); color: #2ecc71; }}
-.badge-off {{ background: rgba(231, 76, 60, 0.2); color: #e74c3c; }}
 
 .ai-card-desc {{
-  font-size: 11.5px;
-  color: #a8cae6;
+  font-size: 13.5px;
+  color: #b0d2f5;
   line-height: 1.45;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
   min-height: 48px;
 }}
 
 .ai-card-points {{
   list-style: none;
-  font-size: 11px;
-  color: #d0e4f7;
+  font-size: 13px;
+  color: #d8e8f8;
   padding: 0;
+  margin: 0;
 }}
 
 .ai-card-points li {{
-  margin-bottom: 6px;
-  line-height: 1.35;
+  margin-bottom: 10px;
+  line-height: 1.45;
 }}
 
 /* ===== SLIDE 8: AS IS / TO BE ===== */
@@ -679,10 +679,9 @@ body {{
       умной генерации отчетов и AI-инсайтов в мессенджере MAX
     </div>
     <div class="cover-features-row">
-      <div class="cover-feature-pill">📱 Бот в MAX Messenger</div>
+      <div class="cover-feature-pill">🤖 <b>Бот:</b> @t115_hakaton_max_bot</div>
+      <div class="cover-feature-pill">🐙 <b>GitHub:</b> github.com/Ma-Mush/MaxHacBot</div>
       <div class="cover-feature-pill">🛒 WB • Ozon • Я.Маркет • Купер</div>
-      <div class="cover-feature-pill">🧠 AI Control Panel (API / Ollama / Rules)</div>
-      <div class="cover-feature-pill">📄 PDF • Excel • PNG</div>
     </div>
     <div class="cover-track">Трек: «Эффективный бизнес»</div>
   </div>
@@ -748,8 +747,8 @@ body {{
           <div><span class="feature-title">Мультиформатная выгрузка</span> — полиграфический PDF с графиками, книга Excel (.xlsx) со стилями и формулами, PNG-карточки.</div>
         </li>
         <li>
-          <div class="feature-icon">🛑</div>
-          <div><span class="feature-title">Приватность и контроль</span> — возможность в любой момент отключить нейросеть одной кнопкой без утечки коммерческой тайны.</div>
+          <div class="feature-icon">🔒</div>
+          <div><span class="feature-title">Защита данных бизнеса</span> — поддержка автономных вычислений и локальных LLM без передачи информации во внешние сети.</div>
         </li>
         <li>
           <div class="feature-icon">🐳</div>
@@ -861,8 +860,8 @@ body {{
   <div class="arch-content">
     <div class="arch-left">
       <div class="section-label">Архитектура решения</div>
-      <div class="slide-heading" style="font-size: 32px;">Стек и архитектурные решения</div>
-      <ul class="solution-features" style="margin-top: 6px;">
+      <div class="slide-heading" style="font-size: 28px; line-height: 1.25; margin-bottom: 22px;">Стек и архитектура решения</div>
+      <ul class="solution-features" style="margin-top: 0;">
         <li>
           <div class="feature-icon">⚡</div>
           <div><span class="feature-title">FastAPI + SQLAlchemy 2.0</span> — асинхронный высокопроизводительный бэкенд с JSONB-хранилищем метрик.</div>
@@ -881,7 +880,7 @@ body {{
         </li>
         <li>
           <div class="feature-icon">🧠</div>
-          <div><span class="feature-title">Multi-Engine AI Broker</span> — единый интерфейс к эвристике, GigaChat, DeepSeek, OpenAI и Ollama с функцией отключения.</div>
+          <div><span class="feature-title">Multi-Engine AI Broker</span> — единый интерфейс к эвристике, GigaChat, DeepSeek, OpenAI и Ollama.</div>
         </li>
       </ul>
       <div class="tech-stack">
@@ -920,10 +919,10 @@ body {{
           Детерминированный алгоритмический расчет на основе статистики, дельт и бизнес-правил.
         </div>
         <ul class="ai-card-points">
-          <li>✓ Работает без интернета и ключей</li>
-          <li>✓ 100% предсказуемый результат</li>
-          <li>✓ 4 четких пункта рекомендаций</li>
-          <li>✓ Идеален для ежедневного мониторинга</li>
+          <li>✓ Работает без интернета, API-ключей и внешних серверов</li>
+          <li>✓ 100% предсказуемый и надежный результат без галлюцинаций</li>
+          <li>✓ 4 четких пункта рекомендаций (рост, риск, аномалия, действие)</li>
+          <li>✓ Моментальное формирование отчета без задержки</li>
         </ul>
       </div>
 
@@ -933,13 +932,13 @@ body {{
           <span class="ai-card-badge badge-cloud">Cloud AI</span>
         </div>
         <div class="ai-card-desc">
-          Глубокий анализ контекста и формулирование стратегических гипотез через передовые нейросети.
+          Глубокий анализ контекста и формулирование гипотез через передовые языковые модели.
         </div>
         <ul class="ai-card-points">
-          <li>✓ GigaChat (Сбер) • DeepSeek</li>
-          <li>✓ OpenAI GPT-4o • Groq • Claude</li>
-          <li>✓ Ввод ключа прямо в чате MAX</li>
-          <li>✓ Автоматический fallback при сбоях</li>
+          <li>✓ Поддержка GigaChat (Сбер), DeepSeek, OpenAI GPT-4o, Groq, Claude</li>
+          <li>✓ Безопасный ввод API-ключа прямо в чате MAX Messenger</li>
+          <li>✓ Автоматический fallback на встроенный анализатор при сбоях</li>
+          <li>✓ Экспертные рекомендации по развитию бизнеса и юнит-экономике</li>
         </ul>
       </div>
 
@@ -952,26 +951,10 @@ body {{
           Автономный запуск открытых моделей непосредственно на сервере компании.
         </div>
         <ul class="ai-card-points">
-          <li>✓ Llama 3 • Mistral • Qwen 2.5</li>
-          <li>✓ Коммерческая тайна не утекает в сеть</li>
-          <li>✓ Проверка связи с демоном из бота</li>
-          <li>✓ Нулевая стоимость за токены</li>
-        </ul>
-      </div>
-
-      <div class="ai-card">
-        <div class="ai-card-header">
-          <span>🛑 Отключение AI</span>
-          <span class="ai-card-badge badge-off">1 Клик</span>
-        </div>
-        <div class="ai-card-desc">
-          Мгновенный возврат к надежному встроенному алгоритму по кнопке в интерфейсе или CLI.
-        </div>
-        <ul class="ai-card-points">
-          <li>✓ Кнопка в меню: «Отключить AI»</li>
-          <li>✓ Консольная команда: disable-ai</li>
-          <li>✓ Честная маркировка в отчетах</li>
-          <li>✓ Полный контроль со стороны селлера</li>
+          <li>✓ Модели Llama 3, Mistral, Qwen 2.5 без передачи данных вовне</li>
+          <li>✓ Коммерческая тайна и метрики бизнеса не покидают периметр</li>
+          <li>✓ Интерактивная проверка связи с демоном прямо из бота</li>
+          <li>✓ Нулевая стоимость за токены и независимость от внешних API</li>
         </ul>
       </div>
     </div>
@@ -1072,7 +1055,7 @@ body {{
         <div class="moscow-header">✓ Should Have (100% Готово)</div>
         <ul class="moscow-list">
           <li>✓ AI Control Panel (API/Ollama/Rules)</li>
-          <li>✓ Кнопка быстрого отключения AI</li>
+          <li>✓ Локальная Ollama (Llama 3/Mistral)</li>
           <li>✓ Ручной импорт CSV/Excel файлов</li>
           <li>✓ Встроенный эвристический аналитик</li>
           <li>✓ Графики трендов и долей (PNG)</li>
@@ -1113,7 +1096,7 @@ body {{
     </div>
     <div class="final-contacts">
       <div class="final-contact">🤖 Бот: @t115_hakaton_max_bot</div>
-      <div class="final-contact">🧪 25 пройденных автотестов</div>
+      <div class="final-contact">🐙 github.com/Ma-Mush/MaxHacBot</div>
       <div class="final-contact">🐳 docker compose up</div>
     </div>
     <div style="margin-top: 26px; color: #a0c4e8; font-size: 15px;">
